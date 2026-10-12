@@ -14,6 +14,10 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'], colorScheme: 'dark' });
 const page = await ctx.newPage();
 const logs = [];
+// En modo demostración la configuración opcional (config.local.js) no existe: ese 404 es esperado.
+const optional404 = new Set();
+const isOptional404 = (l) => /Failed to load resource.*404/.test(l) && optional404.size > 0;
+ctx.on('response', (r) => { if (r.status() === 404 && /config\.local\.js$/.test(r.url())) optional404.add(r.url()); });
 page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) logs.push(`${m.type()}: ${m.text()}`); });
 page.on('pageerror', (e) => logs.push(`pageerror: ${e.message}`));
 const gaps = (p) => p.evaluate(() => { const k = [...document.querySelectorAll('.view > *')]; return k.slice(1).map((el, i) => Math.round(el.getBoundingClientRect().top - k[i].getBoundingClientRect().bottom)); });
@@ -121,6 +125,40 @@ await page.waitForTimeout(300);
 check((await page.locator('.chip', { hasText: 'Aceptado' }).count()) >= 1, 'Bandeja: el auditor acepta la entrega');
 await page.screenshot({ path: `${out}/05b-bandeja-oscuro.png`, fullPage: true });
 
+// ---- Conexión a Supabase (simulada) ----
+{
+  const c = await browser.newContext({ viewport: { width: 1200, height: 800 } });
+  const sp = await c.newPage();
+  const errs = [];
+  sp.on('pageerror', (e) => errs.push(e.message));
+  sp.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  const API = 'https://bumncmqqksbgwuadjlkb.supabase.co';
+  await sp.route('**/js/config.local.js', (r) => r.fulfill({ contentType: 'text/javascript', body: `export const SUPABASE = { url: '${API}', anonKey: 'anon-prueba' };` }));
+  const reqs = [{ id: 'r1', requested_by: 'u1', kind: 'revisar', target_ref: 'A1', question: 'q simulada', status: 'entregado', created_at: '2026-01-01T00:00:00Z' }];
+  const dels = [{ id: 'd1', request_id: 'r1', author: 'claude', body: 'entrega simulada', evidence: [{ tipo: 'norma', ref: 'NIA 500' }], status: 'entregado', created_at: '2026-01-01T00:00:00Z' }];
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
+  await sp.route(`${API}/**`, async (r) => {
+    const q = r.request(); const u = q.url();
+    if (q.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
+    const ok = (b) => r.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify(b) });
+    if (u.includes('/auth/v1/token')) return ok({ access_token: 'a', refresh_token: 'r', user: { id: 'u1', email: 'encargado@x.com' } });
+    if (u.includes('/rest/v1/engagements')) return ok([{ id: 'e1', org_id: 'o1', title: 'Encargo simulado' }]);
+    if (u.includes('/rest/v1/claude_requests') && q.method() === 'GET') return ok(reqs);
+    if (u.includes('/rest/v1/claude_deliveries') && q.method() === 'GET') return ok(dels);
+    return r.fulfill({ status: 204, headers: cors });
+  });
+  await sp.goto(`${base}/${PAGE}#/claude`);
+  await sp.waitForSelector('#l-email');
+  check(true, 'Supabase: sin sesión se muestra el inicio de sesión');
+  await sp.fill('#l-email', 'encargado@x.com'); await sp.fill('#l-pass', 'x');
+  await sp.locator('button', { hasText: 'Entrar' }).click();
+  await sp.waitForSelector('.bandeja-item');
+  check((await sp.locator('.bandeja-item', { hasText: 'entrega simulada' }).count()) === 1, 'Supabase: la bandeja muestra la entrega leída de la base');
+  check((await sp.locator('.sb-foot', { hasText: 'encargado@x.com' }).count()) === 1, 'Supabase: se muestra el usuario conectado');
+  check(errs.length === 0, `Supabase: sin errores ni violaciones de CSP (${errs.slice(0, 2).join(' | ')})`);
+  await c.close();
+}
+
 // ---- Claro ----
 await page.click('#theme-btn');
 await page.waitForTimeout(300);
@@ -150,7 +188,8 @@ await mp.screenshot({ path: `${out}/13-movil-menu.png` });
 
 const csp = logs.filter((l) => /Content Security Policy|Refused/i.test(l));
 check(csp.length === 0, `sin violaciones de CSP (${csp.length})`);
-check(logs.length === 0, `sin errores de consola (${logs.length}) ${logs.slice(0, 3).join(' | ')}`);
+const real = logs.filter((l) => !isOptional404(l));
+check(real.length === 0, `sin errores de consola (${real.length}) ${real.slice(0, 3).join(' | ')}`);
 await browser.close();
 if (problems.length) { console.error(`\n${problems.length} problema(s)`); process.exit(1); }
 console.log('\nTodo bien');

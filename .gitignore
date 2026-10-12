@@ -7,6 +7,9 @@
 supabase/.temp/
 supabase/.branches/
 
+# Configuración local de Supabase (URL y clave pública del proyecto)
+js/config.local.js
+
 # Datos de clientes y archivos de trabajo: NUNCA al repositorio
 datos/
 clientes/

@@ -7,7 +7,7 @@ const root = new URL('../', import.meta.url);
 const read = (p) => readFileSync(new URL(p, root));
 const dataUri = (p, mime) => `data:${mime};base64,${read(p).toString('base64')}`;
 
-const js = (await build({ entryPoints: [new URL('js/app.js', root).pathname], bundle: true, format: 'iife', minify: true, write: false, target: 'es2020' })).outputFiles[0].text
+const js = (await build({ entryPoints: [new URL('js/app.js', root).pathname], bundle: true, external: ['./config.local.js'], format: 'iife', minify: true, write: false, target: 'es2020' })).outputFiles[0].text
   .replaceAll('assets/logo.webp', dataUri('assets/logo.webp', 'image/webp')).replaceAll('</script', '<\\/script');
 
 const mono = dataUri('assets/monograma.png', 'image/png');

@@ -13,6 +13,9 @@ import { pbcView } from './ui/pbc.js';
 import { equipoView } from './ui/equipo.js';
 import { bandejaView } from './ui/bandeja.js';
 import { demoInbox } from './demo/bandeja.js';
+import { Supabase } from './core/supabase.js';
+import { remoteBandeja, localBandeja } from './core/bandeja-remote.js';
+import { loginView } from './ui/login.js';
 import { copyText } from './ui/copy.js';
 import { formatMoney, plainNumber, round2 } from './core/money.js';
 
@@ -49,8 +52,15 @@ const ctx = {
   today,
   ledger: new Ledger(demoData()),
   eng: demoEngagement(today),
-  user: 'u-campo',
-  inbox: demoInbox(),
+  bandeja: localBandeja(demoInbox(), 'u-campo'),
+  sb: null,
+  loginError: null,
+  async signIn(email, password) {
+    await ctx.sb.signIn(email, password);
+    try { ctx.bandeja = await remoteBandeja(ctx.sb); } catch (e) { ctx.sb.signOut(); throw e; }
+    ctx.loginError = null; render();
+  },
+  signOut() { ctx.sb.signOut(); ctx.bandeja = null; render(); },
   selMode: false,
   selection: new Map(),
   selDoc: null,
@@ -92,7 +102,7 @@ function renderSide(current) {
       h('span', { class: 'brand-mono', 'aria-hidden': 'true' }),
       h('span', { class: 'brand-text' }, h('span', { class: 'brand-name' }, 'Monterroso'), h('span', { class: 'brand-tag' }, 'Auditores & Consultores'))),
     buildNav(current),
-    h('div', { class: 'sb-foot' }, 'AuditOS · v0.2 demostración'));
+    h('div', { class: 'sb-foot' }, ctx.sb?.user ? [h('div', { class: 'tiny' }, ctx.sb.user.email), h('button', { type: 'button', class: 'btn sm ghost', onClick: () => ctx.signOut() }, 'Salir')] : 'AuditOS · v0.3 demostración'));
 }
 const menuBtn = document.getElementById('menu-btn');
 function closeMenu() { side.classList.remove('open'); scrim.classList.remove('show'); menuBtn.setAttribute('aria-expanded', 'false'); }
@@ -116,7 +126,8 @@ function render() {
   title.textContent = item.label;
   document.title = `${item.label} · AuditOS`;
   let el;
-  if (item.id === 'tablero') el = tableroView(ctx);
+  if (ctx.sb && !ctx.sb.user) el = loginView(ctx, ctx.loginError);
+  else if (item.id === 'tablero') el = tableroView(ctx);
   else if (item.id === 'cedulas') el = cedulasView(ctx, arg ?? 'BG');
   else if (item.id === 'perfil') el = perfilView(ctx);
   else if (item.id === 'pbc') el = pbcView(ctx);
@@ -129,4 +140,13 @@ function render() {
   updateSelection();
 }
 addEventListener('hashchange', () => { closeMenu(); ctx.selection.clear(); render(); scrollTo(0, 0); view.focus({ preventScroll: true }); });
-render();
+// Configuración opcional (js/config.local.js, fuera del repo). Sin ella la app corre en modo demostración.
+async function boot() {
+  try {
+    const { SUPABASE } = await import('./config.local.js');
+    ctx.sb = new Supabase(SUPABASE, { storage: sessionStorage });
+    if (ctx.sb.user) ctx.bandeja = await remoteBandeja(ctx.sb).catch((e) => { ctx.sb.signOut(); ctx.loginError = e.message; return null; });
+  } catch { /* modo demostración */ }
+  render();
+}
+boot();

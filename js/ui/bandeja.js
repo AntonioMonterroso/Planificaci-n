@@ -8,14 +8,14 @@ const TONE = { pendiente: 'sun', en_proceso: 'sky', entregado: 'gold', aceptado:
 const EV_LABEL = { celda: 'Cédula/celda', norma: 'Norma', ley: 'Ley', documento: 'Documento' };
 
 export function bandejaView(ctx) {
-  const ib = ctx.inbox; const me = ctx.user;
+  const api = ctx.bandeja; const ib = api.inbox;
   const counts = ib.counts();
 
   const kind = h('select', { id: 'b-kind' }, Object.entries(KINDS).map(([k, l]) => h('option', { value: k }, l)));
   const ref = h('input', { id: 'b-ref', type: 'text', placeholder: 'Ej. A1-4!F28 (opcional)' });
   const q = h('textarea', { id: 'b-q', rows: 3, placeholder: 'Escribe la pregunta o lo que necesitas…' });
-  const send = () => {
-    try { ib.ask({ by: me, kind: kind.value, targetRef: ref.value.trim() || null, question: q.value }); toast('Solicitud enviada a Claude'); ctx.rerender(); }
+  const send = async () => {
+    try { await api.ask({ kind: kind.value, targetRef: ref.value.trim() || null, question: q.value }); toast('Solicitud enviada a Claude'); ctx.rerender(); }
     catch (e) { toast(e.message); }
   };
   const form = card({ title: 'Pedir a Claude' },
@@ -26,8 +26,8 @@ export function bandejaView(ctx) {
     h('div', { class: 'row' }, btn('Enviar', { iconName: 'sparkle', onClick: send }),
       h('span', { class: 'tiny' }, 'Claude trabaja cuando abres una sesión; la bandeja no es en tiempo real.')));
 
-  const decide = (r, accept) => {
-    try { ib.decide(r.id, { by: me, accept }); toast(accept ? 'Entrega aceptada' : 'Cambios solicitados'); ctx.rerender(); }
+  const decide = async (r, accept) => {
+    try { await api.decide(r.id, accept); toast(accept ? 'Entrega aceptada' : 'Cambios solicitados'); ctx.rerender(); }
     catch (e) { toast(e.message); }
   };
   const item = (r) => {
@@ -52,7 +52,7 @@ export function bandejaView(ctx) {
     : [h('p', { class: 'muted' }, 'Aún no hay solicitudes.')];
 
   return h('div', { class: 'view' },
-    pageHead({ eyebrow: `${ctx.eng.client.code} · ${ctx.eng.client.name}`, title: 'Bandeja de Claude',
+    pageHead({ eyebrow: api.engagement ? `Conectado · ${api.engagement.title}` : `${ctx.eng.client.code} · ${ctx.eng.client.name} (demostración)`, title: 'Bandeja de Claude',
       sub: 'Pide revisiones, explicaciones y borradores. Cada entrega cita su evidencia (cédula/celda, norma o ley) o dice qué dato falta. Claude no firma, no cierra fases ni aprueba ajustes.' }),
     counts.entregado ? banner('info', `${counts.entregado} entrega${counts.entregado > 1 ? 's' : ''} esperan tu decisión.`) : null,
     form,
