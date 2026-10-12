@@ -56,3 +56,28 @@ test('la bandeja remota carga, pide y decide a través de la API', async () => {
   await api.decide('r1', true);
   assert.ok(log.includes('POST claude_requests') && log.includes('PATCH claude_deliveries') && log.includes('PATCH claude_requests'));
 });
+
+test('guardar y cargar papeles: la base solo recibe texto cifrado y el contenido regresa íntegro', async () => {
+  const { savePapers, loadPapers } = await import('../js/core/papers-remote.js');
+  const { Ledger } = await import('../js/core/ledger.js');
+  const { demoData } = await import('../js/demo/data.js');
+  const stored = []; const calls = [];
+  const sb = { user: { id: 'u1', email: 'e@x.com' }, rest: async (p, o = {}) => {
+    calls.push(`${o.method ?? 'GET'} ${p.split('?')[0]}`);
+    if (p.startsWith('papers?on_conflict')) { stored.push(...o.body); return null; }
+    if (p.startsWith('papers?select')) return stored.map((r) => ({ ref: r.ref, ciphertext: r.ciphertext }));
+    return null;
+  } };
+  const eng = { id: 'e1', org_id: 'o1' };
+  const L = new Ledger(demoData());
+  const n = await savePapers(sb, eng, L, 'frase-de-prueba-larga-1');
+  assert.equal(n, L.papers.size);
+  assert.ok(stored.every((r) => r.status === 'borrador' && r.version === 1 && r.ciphertext.startsWith('v1.')));
+  assert.ok(!JSON.stringify(stored).includes('Caja general'), 'nada legible llega a la base');
+  assert.ok(calls.includes('POST audit_log'));
+  const back = await loadPapers(sb, eng, 'frase-de-prueba-larga-1');
+  assert.equal(back.papers.size, L.papers.size);
+  assert.equal(back.get('BG').totals.contab, L.get('BG').totals.contab);
+  assert.equal(back.adjustments.length, L.adjustments.length);
+  await assert.rejects(loadPapers(sb, eng, 'frase-incorrecta-123'), /No se pudo descifrar/);
+});

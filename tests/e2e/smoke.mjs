@@ -157,6 +157,7 @@ await page.screenshot({ path: `${out}/05b-bandeja-oscuro.png`, fullPage: true })
   await sp.route('**/js/config.local.js', (r) => r.fulfill({ contentType: 'text/javascript', body: `export const SUPABASE = { url: '${API}', anonKey: 'anon-prueba' };` }));
   const reqs = [{ id: 'r1', requested_by: 'u1', kind: 'revisar', target_ref: 'A1', question: 'q simulada', status: 'entregado', created_at: '2026-01-01T00:00:00Z' }];
   const dels = [{ id: 'd1', request_id: 'r1', author: 'claude', body: 'entrega simulada', evidence: [{ tipo: 'norma', ref: 'NIA 500' }], status: 'entregado', created_at: '2026-01-01T00:00:00Z' }];
+  const saved = [];
   const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
   await sp.route(`${API}/**`, async (r) => {
     const q = r.request(); const u = q.url();
@@ -166,6 +167,8 @@ await page.screenshot({ path: `${out}/05b-bandeja-oscuro.png`, fullPage: true })
     if (u.includes('/rest/v1/engagements')) return ok([{ id: 'e1', org_id: 'o1', title: 'Encargo simulado' }]);
     if (u.includes('/rest/v1/claude_requests') && q.method() === 'GET') return ok(reqs);
     if (u.includes('/rest/v1/claude_deliveries') && q.method() === 'GET') return ok(dels);
+    if (u.includes('/rest/v1/papers') && q.method() === 'POST') { saved.push(...q.postDataJSON()); return r.fulfill({ status: 201, headers: cors }); }
+    if (u.includes('/rest/v1/papers') && q.method() === 'GET') return ok(saved.map(({ ref, ciphertext }) => ({ ref, ciphertext })));
     return r.fulfill({ status: 204, headers: cors });
   });
   await sp.goto(`${base}/${PAGE}#/claude`);
@@ -176,6 +179,21 @@ await page.screenshot({ path: `${out}/05b-bandeja-oscuro.png`, fullPage: true })
   await sp.waitForSelector('.bandeja-item');
   check((await sp.locator('.bandeja-item', { hasText: 'entrega simulada' }).count()) === 1, 'Supabase: la bandeja muestra la entrega leída de la base');
   check((await sp.locator('.sb-foot', { hasText: 'encargado@x.com' }).count()) === 1, 'Supabase: se muestra el usuario conectado');
+  await sp.goto(`${base}/${PAGE}#/cedulas/BG`);
+  await sp.waitForSelector('#sync-pass');
+  await sp.fill('#sync-pass', 'frase-de-prueba-larga-1');
+  await sp.locator('button', { hasText: 'Guardar' }).click();
+  await sp.waitForFunction(() => document.body.textContent.includes('papeles guardados cifrados'));
+  check(saved.length > 5 && saved.every((r) => r.ciphertext.startsWith('v1.')) && !JSON.stringify(saved).includes('Caja general'), 'Supabase: se guardan solo textos cifrados');
+  check((await sp.inputValue('#sync-pass')) === '', 'Supabase: la frase se borra de la pantalla tras usarla');
+  await sp.fill('#sync-pass', 'frase-de-prueba-larga-1');
+  await sp.locator('button', { hasText: 'Cargar' }).click();
+  await sp.waitForFunction(() => document.body.textContent.includes('Papeles cargados y descifrados'));
+  check(true, 'Supabase: los papeles se cargan y se descifran');
+  await sp.fill('#sync-pass', 'frase-equivocada-123');
+  await sp.locator('button', { hasText: 'Cargar' }).click();
+  await sp.waitForFunction(() => document.body.textContent.includes('No se pudo descifrar'));
+  check(true, 'Supabase: con frase incorrecta no se descifra');
   check(errs.length === 0, `Supabase: sin errores ni violaciones de CSP (${errs.slice(0, 2).join(' | ')})`);
   await c.close();
 }

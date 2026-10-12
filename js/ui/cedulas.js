@@ -85,6 +85,16 @@ export function cedulasView(ctx, wanted) {
   const quick = kids.length ? h('div', { class: 'row' }, h('span', { class: 'tiny' }, 'Detalle en:'),
     kids.map((k) => h('a', { class: 'link-btn', href: `#/cedulas/${encodeURIComponent(k.ref)}`, title: k.title }, k.ref, icon('chevron', 12)))) : null;
   const tree = h('div', { class: 'tree' }, treeList(ctx, L.roots(), ref));
+  const sync = ctx.bandeja?.engagement && ctx.sb?.user && paper.kind === 'centralizadora' ? (() => {
+    const pass = h('input', { id: 'sync-pass', type: 'password', autocomplete: 'off', placeholder: 'Mínimo 12 caracteres' });
+    const run = (fn, ok) => async () => { try { const r = await fn(pass.value); toast(ok(r)); ctx.rerender(); } catch (e) { toast(e.message); } };
+    return card({ title: 'Guardar en Supabase (cifrado)' },
+      h('p', { class: 'tiny' }, 'El contenido se cifra en tu navegador con esta frase antes de salir. La frase no se guarda en ninguna parte: si la pierdes, el contenido es irrecuperable.'),
+      h('div', { class: 'field' }, h('label', { for: 'sync-pass' }, 'Frase de cifrado'), pass),
+      h('div', { class: 'row' },
+        btn('Guardar', { iconName: 'upload', cls: 'sm', onClick: run((p) => ctx.savePapers(p), (n) => `${n} papeles guardados cifrados`) }),
+        btn('Cargar', { iconName: 'down', cls: 'sm', onClick: run((p) => ctx.loadPapers(p), () => 'Papeles cargados y descifrados') })));
+  })() : null;
   const pending = paper.kind === 'centralizadora' ? pendingRubros(L) : [];
   const generator = pending.length ? card({ title: 'Generar paquetes por rubro' },
     h('p', { class: 'tiny' }, 'Crea la sumaria, las analíticas y las subanalíticas del rubro, enlazadas a la centralizadora. El saldo que ya tiene la línea pasa a la primera cédula hoja con su documento de origen, y la centralizadora sigue cuadrando.'),
@@ -96,6 +106,7 @@ export function cedulasView(ctx, wanted) {
     banners,
     table,
     generator,
+    sync,
     fold('Ajustes y reclasificaciones', adjustmentsBody(ctx, ref), { badge: adjCount(L, ref) }),
     fold('Marcas de auditoría', marksBody()),
     fold('Árbol de cédulas', tree));

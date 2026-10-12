@@ -17,6 +17,7 @@ import { Supabase } from './core/supabase.js';
 import { remoteBandeja, localBandeja } from './core/bandeja-remote.js';
 import { loginView } from './ui/login.js';
 import { analiticosView } from './ui/analiticos.js';
+import { savePapers, loadPapers } from './core/papers-remote.js';
 import { demoInputs } from './demo/havad.js';
 import { withPackage, RUBROS } from './core/paquetes.js';
 import { copyText, toast } from './ui/copy.js';
@@ -57,6 +58,8 @@ const ctx = {
   eng: demoEngagement(today),
   bandeja: localBandeja(demoInbox(), 'u-campo'),
   sb: null,
+  savePapers: (pass) => savePapers(ctx.sb, ctx.bandeja.engagement, ctx.ledger, pass),
+  async loadPapers(pass) { ctx.ledger = await loadPapers(ctx.sb, ctx.bandeja.engagement, pass); ctx.selection.clear(); },
   havad: demoInputs(),
   generatePackage(code) {
     try { ctx.ledger = withPackage(ctx.ledger, code); ctx.selection.clear(); toast(`Paquete de ${RUBROS[code].title} generado`); render(); }
