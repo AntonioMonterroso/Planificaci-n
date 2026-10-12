@@ -9,7 +9,7 @@ trap 'run "$BIN/pg_ctl -D $D/data -m immediate stop >/dev/null" || true; rm -rf 
 P="$BIN/psql -h $D -p 54329 -U postgres -v ON_ERROR_STOP=1 -q"
 run "$P -c 'create role authenticated nologin; create role app login;' postgres"
 run "$P -c 'grant authenticated to app;' postgres"
-run "$P -f $(dirname "$0")/../migrations/0001_core.sql postgres"
+for m in "$(dirname "$0")"/../migrations/*.sql; do run "$P -f $m postgres"; done
 run "$P -c 'grant usage on schema public to authenticated; grant select,insert,update,delete on all tables in schema public to authenticated; grant usage on all sequences in schema public to authenticated; grant execute on all functions in schema public to authenticated;' postgres"
 run "$P -f $(dirname "$0")/rls.sql postgres" 2>&1 | grep -E "NOTICE|ERROR|FALLA" | sed "s/^psql:[^ ]* //"
 echo "RLS: todas las pruebas pasaron"

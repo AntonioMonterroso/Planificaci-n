@@ -332,3 +332,7 @@ select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px
 .tl-lab { max-width: 130px; white-space: normal; text-align: center; }
 @media (max-width: 560px) { .tl { padding: 64px 48px 72px; } }
 .tl { min-width: 640px; }
+
+/* Bandeja de Claude */
+.bandeja-item .entrega { margin-top: var(--s3); display: grid; gap: var(--s3); }
+.bandeja-item .entrega p { margin: 0; }

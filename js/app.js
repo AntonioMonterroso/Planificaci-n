@@ -11,6 +11,8 @@ import { tableroView, soonView } from './ui/tablero.js';
 import { perfilView } from './ui/perfil.js';
 import { pbcView } from './ui/pbc.js';
 import { equipoView } from './ui/equipo.js';
+import { bandejaView } from './ui/bandeja.js';
+import { demoInbox } from './demo/bandeja.js';
 import { copyText } from './ui/copy.js';
 import { formatMoney, plainNumber, round2 } from './core/money.js';
 
@@ -47,6 +49,8 @@ const ctx = {
   today,
   ledger: new Ledger(demoData()),
   eng: demoEngagement(today),
+  user: 'u-campo',
+  inbox: demoInbox(),
   selMode: false,
   selection: new Map(),
   selDoc: null,
@@ -117,6 +121,7 @@ function render() {
   else if (item.id === 'perfil') el = perfilView(ctx);
   else if (item.id === 'pbc') el = pbcView(ctx);
   else if (item.id === 'equipo') el = equipoView(ctx);
+  else if (item.id === 'claude') el = bandejaView(ctx);
   else el = soonView(item);
   const y = scrollY;
   mount(view, el);

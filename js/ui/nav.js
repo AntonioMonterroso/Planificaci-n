@@ -25,7 +25,7 @@ export const NAV = [
     { id: 'biblioteca', icon: 'book', label: 'Biblioteca', desc: 'Guías, políticas y buenas prácticas con búsqueda.' },
   ] },
   { group: 'Sistema', items: [
-    { id: 'claude', icon: 'sparkle', label: 'Bandeja de Claude', desc: 'Pide revisiones, preguntas y borradores; recibe entregas con evidencia.' },
+    { id: 'claude', icon: 'sparkle', label: 'Bandeja de Claude', ready: true, desc: 'Pide revisiones, preguntas y borradores; recibe entregas con evidencia.' },
     { id: 'bitacora', icon: 'chain', label: 'Bitácora', desc: 'Registro inalterable con hashes encadenados.' },
     { id: 'seguridad', icon: 'shield', label: 'Seguridad', desc: 'Usuarios, roles, permisos, MFA, llaves y respaldos.' },
   ] },

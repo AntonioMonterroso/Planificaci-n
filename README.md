@@ -21,6 +21,8 @@ node tests/e2e/smoke.mjs   # prueba en navegador (requiere Playwright)
 
 - **Perfil del encargo** (`js/core/engagement.js`): plazo de armado del archivo, hitos, flujo de documentos del cliente con verificación formal y cuatro ojos, matriz de ocupaciones con suplentes y vacantes, e incompatibilidades; la fase no se cierra con bloqueos.
 
+- **Bandeja de Claude** (`js/core/bandeja.js`, `supabase/migrations/0002_bandeja.sql`): solicitudes con contexto (cédula/celda), entregas que **citan evidencia o declaran el dato faltante**, borrador que solo se aplica al aceptar. Claude no decide su propia entrega; en la base lo imponen RLS y triggers (probado en PostgreSQL local).
+
 ## Seguridad (resumen)
 
 El repositorio contiene **solo código**. Los datos de clientes vivirán en Supabase (RLS forzada, login por usuario y contraseña, cifrado de contenido en el navegador, bitácora encadenada). Nunca se versionan datos, claves ni archivos de clientes (`.gitignore`, `.gitleaks.toml`). Detalle en `docs/plan.md`.

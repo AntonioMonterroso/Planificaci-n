@@ -71,3 +71,37 @@ update audit_log set action='manipulado' where seq=1;
 alter table audit_log enable trigger log_immutable_t;
 select t.as_user(1);
 select t.expect('manipular una fila rompe la cadena', not verify_log('a0000000-0000-0000-0000-000000000001'));
+
+-- ---------- Bandeja de Claude ----------
+reset role;
+insert into members values ('a0000000-0000-0000-0000-000000000001', t.uid(8), 'asistente');
+insert into engagement_team values ('e0000000-0000-0000-0000-00000000000a', t.uid(8), 'asistente');
+select t.as_user(2);
+insert into claude_requests(id,org_id,engagement_id,kind,target_ref,question) values
+ ('d0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001','e0000000-0000-0000-0000-00000000000a','revisar','A1','¿Cuadra la analítica?');
+select t.as_user(4);
+select t.fails('auxiliar fuera del equipo no crea solicitudes', $q$insert into claude_requests(org_id,engagement_id,kind,question) values ('a0000000-0000-0000-0000-000000000001','e0000000-0000-0000-0000-00000000000a','revisar','x')$q$);
+select t.expect('auxiliar fuera del equipo no ve solicitudes', (select count(*) from claude_requests)=0);
+select t.as_user(5);
+select t.expect('otra firma no ve solicitudes', (select count(*) from claude_requests)=0);
+select t.as_user(8);
+select t.expect('asistente (en equipo) ve la solicitud', (select count(*) from claude_requests)=1);
+select t.fails('asistente no crea solicitudes', $q$insert into claude_requests(org_id,engagement_id,kind,question) values ('a0000000-0000-0000-0000-000000000001','e0000000-0000-0000-0000-00000000000a','revisar','x')$q$);
+select t.fails('no se entrega sin entrega registrada', $q$update claude_requests set status='entregado'$q$);
+update claude_requests set status='en_proceso';
+select t.expect('asistente toma la solicitud', (select status from claude_requests)='en_proceso');
+select t.fails('entrega sin evidencia ni faltante', $q$insert into claude_deliveries(org_id,request_id,body) values ('a0000000-0000-0000-0000-000000000001','d0000000-0000-0000-0000-000000000001','Todo bien')$q$);
+insert into claude_deliveries(id,org_id,request_id,body,evidence) values
+ ('d1000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001','d0000000-0000-0000-0000-000000000001','Cuadra','[{"tipo":"celda","ref":"A1!F10"}]');
+update claude_requests set status='entregado';
+select t.expect('asistente entrega con evidencia', (select status from claude_requests)='entregado');
+update claude_deliveries set status='aceptado';
+select t.expect('asistente no puede aceptar su entrega (0 filas)', (select status from claude_deliveries)='entregado');
+select t.fails('asistente no puede marcar aceptada la solicitud', $q$update claude_requests set status='aceptado'$q$);
+update claude_deliveries set body='otro'; delete from claude_deliveries;
+select t.expect('la entrega no se edita ni se borra', (select body from claude_deliveries)='Cuadra');
+select t.as_user(2);
+select t.expect('encargado ve la entrega', (select count(*) from claude_deliveries)=1);
+update claude_deliveries set status='aceptado'; update claude_requests set status='aceptado';
+select t.expect('el auditor acepta y queda su nombre', (select decided_by from claude_deliveries)=t.uid(2));
+select t.fails('una entrega decidida no se vuelve a decidir', $q$update claude_deliveries set status='rechazado'$q$);

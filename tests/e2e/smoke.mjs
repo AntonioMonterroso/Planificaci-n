@@ -108,6 +108,19 @@ await page.waitForTimeout(300);
 check((await page.locator('.banner.error').count()) > before, 'Equipo: la ausencia del encargado deja funciones sin responsable');
 await page.screenshot({ path: `${out}/05-equipo-oscuro.png`, fullPage: true });
 
+// ---- Bandeja de Claude ----
+await page.goto(`${base}/${PAGE}#/claude`);
+await page.waitForSelector('.bandeja-item');
+const items0 = await page.locator('.bandeja-item').count();
+await page.fill('#b-q', '¿Qué documentos faltan para cerrar Bancos?');
+await page.locator('button', { hasText: 'Enviar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.bandeja-item').count()) === items0 + 1, 'Bandeja: la solicitud nueva aparece como pendiente');
+await page.locator('button', { hasText: 'Aceptar' }).first().click();
+await page.waitForTimeout(300);
+check((await page.locator('.chip', { hasText: 'Aceptado' }).count()) >= 1, 'Bandeja: el auditor acepta la entrega');
+await page.screenshot({ path: `${out}/05b-bandeja-oscuro.png`, fullPage: true });
+
 // ---- Claro ----
 await page.click('#theme-btn');
 await page.waitForTimeout(300);
