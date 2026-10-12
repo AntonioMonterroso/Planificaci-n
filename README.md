@@ -29,6 +29,8 @@ node tests/e2e/smoke.mjs   # prueba en navegador (requiere Playwright)
 
 - **Cifrado de contenido** (`js/core/crypto.js`, `js/core/papers-remote.js`): al guardar en Supabase, cada cédula se cifra en el navegador (AES-GCM, llave derivada con PBKDF2 de una frase de al menos 12 caracteres). La base solo guarda referencia, versión, estado y texto cifrado; el guardado queda en la bitácora. La frase no se guarda en ningún lado: **si se pierde, el contenido es irrecuperable** (el plan prevé un procedimiento de recuperación con dos personas, aún no implementado).
 
+- **Calendario** (`js/core/calendario.js`): reúne hitos, informe, armado del archivo, documentos pendientes y tareas. No trae fechas legales: cada obligación se registra con su **fuente oficial** obligatoria, queda *sin validar* y la valida otra persona (en la demostración hay un solo usuario, así que un validador ficticio simula la segunda). La parte legal la validan el auditor y su asesor.
+
 ## Conectar a Supabase (opcional)
 
 Sin configuración la app corre en modo demostración. Para conectarla: copia `js/config.example.js` como `js/config.local.js` (ignorado por git) con la URL y la clave **anon** del proyecto, aplica `supabase/migrations/*.sql` y crea los usuarios en Auth. Entra con usuario y contraseña; la bandeja lee y escribe en la base y es la RLS quien decide qué ves y qué puedes hacer. Nunca uses aquí la clave `service_role`. La CSP de `index.html` solo permite conectar al dominio del proyecto.

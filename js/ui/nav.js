@@ -21,7 +21,7 @@ export const NAV = [
   ] },
   { group: 'Cumplimiento', items: [
     { id: 'legal', icon: 'scale', label: 'Cumplimiento legal', desc: 'SAT, IGSS, Código de Comercio, lavado de activos y más: por separado y en conjunto.' },
-    { id: 'calendario', icon: 'calendar', label: 'Calendario', desc: 'Vencimientos fiscales, laborales y plazos del encargo.' },
+    { id: 'calendario', icon: 'calendar', label: 'Calendario', ready: true, desc: 'Vencimientos fiscales, laborales y plazos del encargo.' },
     { id: 'biblioteca', icon: 'book', label: 'Biblioteca', desc: 'Guías, políticas y buenas prácticas con búsqueda.' },
   ] },
   { group: 'Sistema', items: [

@@ -133,6 +133,19 @@ await page.press('#hv-inventarios', 'Tab');
 await page.waitForTimeout(300);
 check((await page.locator('.banner.warn').count()) === 1 && (await page.locator('.tiny', { hasText: 'Falta: Inventarios' }).count()) >= 1, 'Analíticos: sin dato no se inventa el ratio');
 
+// ---- Calendario ----
+await page.goto(`${base}/${PAGE}#/calendario`);
+await page.waitForSelector('.occ');
+const evs = await page.locator('.occ').count();
+await page.fill('#ob-title', 'Obligación de prueba'); await page.fill('#ob-date', '2026-12-31');
+await page.locator('button', { hasText: 'Registrar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.occ').count()) === evs, 'Calendario: sin fuente oficial no se registra la obligación');
+await page.fill('#ob-title', 'Obligación de prueba'); await page.fill('#ob-date', '2026-12-31'); await page.fill('#ob-source', 'Fuente de prueba');
+await page.locator('button', { hasText: 'Registrar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.occ').count()) === evs + 1 && (await page.locator('.chip', { hasText: 'Sin validar' }).count()) === 1, 'Calendario: la obligación con fuente queda sin validar');
+
 // ---- Bandeja de Claude ----
 await page.goto(`${base}/${PAGE}#/claude`);
 await page.waitForSelector('.bandeja-item');
