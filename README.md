@@ -37,6 +37,9 @@ node tests/e2e/smoke.mjs   # prueba en navegador (requiere Playwright)
 
 - **Informe y cartas** (`js/core/informe.js`, `js/informe/plantillas.js`): informe del auditor (con tipo de opinión), carta de gerencia y carta de representación como secciones editables con variables del encargo. Son estructura y guía: el texto lo redacta y firma el auditor y lo contrasta con la norma. No se firma con secciones vacías, texto por completar, verificaciones previas fallidas (cuadre, documentos, legal, formatos, vacantes) ni firmas repetidas; firmado es inmutable y el desbloqueo exige motivo y abre versión nueva. Exporta a texto, HTML para Word y PDF por impresión.
 
+- **Claude como miembro del equipo** (`scripts/asistente.mjs`, `js/core/asistente.js`, `.claude/skills/`): Claude entra como usuario `asistente` (nunca `service_role`) con variables de entorno, lee las solicitudes, las toma y entrega con evidencia. Preguntas, entregas, faltantes y borradores viajan **cifrados** con la frase del equipo; solo tipo, referencia de cédula y estado quedan legibles. La base impide que Claude acepte, firme o cree solicitudes. Skills: `/bandeja`, `/revisar`, `/formato-nuevo`, `/legal`.
+- **Guardado del trabajo**: al guardar en Supabase (cifrado) también viajan las respuestas de formatos, legal, informe, calendario y analíticos.
+
 ## Conectar a Supabase (opcional)
 
 Sin configuración la app corre en modo demostración. Para conectarla: copia `js/config.example.js` como `js/config.local.js` (ignorado por git) con la URL y la clave **anon** del proyecto, aplica `supabase/migrations/*.sql` y crea los usuarios en Auth. Entra con usuario y contraseña; la bandeja lee y escribe en la base y es la RLS quien decide qué ves y qué puedes hacer. Nunca uses aquí la clave `service_role`. La CSP de `index.html` solo permite conectar al dominio del proyecto.

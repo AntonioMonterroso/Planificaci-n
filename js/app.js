@@ -62,8 +62,13 @@ const ctx = {
   eng: demoEngagement(today),
   bandeja: localBandeja(demoInbox(), 'u-campo'),
   sb: null,
-  savePapers: (pass) => savePapers(ctx.sb, ctx.bandeja.engagement, ctx.ledger, pass),
-  async loadPapers(pass) { ctx.ledger = await loadPapers(ctx.sb, ctx.bandeja.engagement, pass); ctx.selection.clear(); },
+  workspace: () => ({ formatos: ctx.formatos ?? {}, legal: ctx.legal ?? null, legalPerfil: ctx.legalPerfil ?? null, docs: ctx.docs ?? {}, obligations: ctx.eng.obligations ?? [], havad: ctx.havad }),
+  savePapers: (pass) => savePapers(ctx.sb, ctx.bandeja.engagement, ctx.ledger, pass, ctx.workspace()),
+  async loadPapers(pass) {
+    const { ledger, workspace: w } = await loadPapers(ctx.sb, ctx.bandeja.engagement, pass);
+    ctx.ledger = ledger; ctx.selection.clear();
+    if (w) { ctx.formatos = w.formatos ?? {}; ctx.legal = w.legal ?? undefined; ctx.legalPerfil = w.legalPerfil ?? undefined; ctx.docs = w.docs ?? {}; ctx.eng.obligations = w.obligations ?? []; ctx.havad = w.havad ?? ctx.havad; }
+  },
   havad: demoInputs(),
   generatePackage(code) {
     try { ctx.ledger = withPackage(ctx.ledger, code); ctx.selection.clear(); toast(`Paquete de ${RUBROS[code].title} generado`); render(); }

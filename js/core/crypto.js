@@ -37,3 +37,13 @@ export async function decryptJSON(text, passphrase, cache = new Map()) {
     return JSON.parse(dec.decode(pt));
   } catch { throw new Error('No se pudo descifrar: frase incorrecta o contenido alterado'); }
 }
+
+/** Cifrador de sesión: una sola derivación de llave para cifrar y todas las que hagan falta para descifrar. */
+export function makeCipher(passphrase) {
+  let keyInfo = null; const cache = new Map();
+  return {
+    async enc(value) { keyInfo ??= await makeKey(passphrase); return encryptJSON(value, keyInfo); },
+    async dec(text) { return decryptJSON(text, passphrase, cache); },
+  };
+}
+export const isCipher = (t) => typeof t === 'string' && /^v1\.[\w-]+\.[\w-]+\.[\w-]+$/.test(t);

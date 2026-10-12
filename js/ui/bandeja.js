@@ -3,6 +3,7 @@ import { h } from './dom.js';
 import { pageHead, card, banner, chip, btn } from './kit.js';
 import { toast } from './copy.js';
 import { KINDS, STATUS_LABEL } from '../core/bandeja.js';
+import { makeCipher } from '../core/crypto.js';
 
 const TONE = { pendiente: 'sun', en_proceso: 'sky', entregado: 'gold', aceptado: 'mint', cambios: 'rose' };
 const EV_LABEL = { celda: 'Cédula/celda', norma: 'Norma', ley: 'Ley', documento: 'Documento' };
@@ -47,6 +48,15 @@ export function bandejaView(ctx) {
       chip(TONE[r.status], STATUS_LABEL[r.status]));
   };
 
+  const pass = h('input', { id: 'b-pass', type: 'password', autocomplete: 'off', placeholder: 'Mínimo 12 caracteres' });
+  const unlockCard = !api.unlocked ? card({ title: 'Desbloquear contenido' },
+    h('p', { class: 'tiny' }, 'Las preguntas y entregas se guardan cifradas. Escribe tu frase de cifrado (la misma de Cédulas); no se guarda en ninguna parte y se pide de nuevo al recargar.'),
+    h('div', { class: 'field' }, h('label', { for: 'b-pass' }, 'Frase de cifrado'), pass),
+    h('div', { class: 'row' }, btn('Desbloquear', { iconName: 'shield', onClick: async () => {
+      try { if (pass.value.length < 12) throw new Error('La frase debe tener al menos 12 caracteres'); await api.unlock(makeCipher(pass.value)); toast('Contenido desbloqueado'); ctx.rerender(); }
+      catch (e) { toast(e.message); }
+    } }))) : null;
+
   const list = ib.requests.length
     ? [...ib.requests].reverse().map(item)
     : [h('p', { class: 'muted' }, 'Aún no hay solicitudes.')];
@@ -55,6 +65,7 @@ export function bandejaView(ctx) {
     pageHead({ eyebrow: api.engagement ? `Conectado · ${api.engagement.title}` : `${ctx.eng.client.code} · ${ctx.eng.client.name} (demostración)`, title: 'Bandeja de Claude',
       sub: 'Pide revisiones, explicaciones y borradores. Cada entrega cita su evidencia (cédula/celda, norma o ley) o dice qué dato falta. Claude no firma, no cierra fases ni aprueba ajustes.' }),
     counts.entregado ? banner('info', `${counts.entregado} entrega${counts.entregado > 1 ? 's' : ''} esperan tu decisión.`) : null,
+    unlockCard,
     form,
     card({ title: 'Solicitudes y entregas', flush: true }, h("div", { class: "grid" }, list)));
 }

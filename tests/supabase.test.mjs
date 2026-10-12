@@ -39,22 +39,63 @@ test('sin configuración o sin sesión no hay acceso', async () => {
   await assert.rejects(new Supabase(cfg).rest('t'), /Sin sesión/);
 });
 
-test('la bandeja remota carga, pide y decide a través de la API', async () => {
-  const log = [];
-  const sb = { rest: async (p, o = {}) => {
-    log.push(`${o.method ?? 'GET'} ${p.split('?')[0]}`);
+// Base simulada compartida por el auditor y el asistente: guarda exactamente lo que recibe (como Supabase).
+function fakeDb() {
+  const db = { requests: [], deliveries: [] };
+  const rest = async (p, o = {}) => {
+    const m = o.method ?? 'GET';
     if (p.startsWith('engagements')) return [{ id: 'e1', org_id: 'o1', title: 'T' }];
-    if (p.startsWith('claude_requests?')) return [{ id: 'r1', requested_by: 'u1', kind: 'revisar', target_ref: 'A1', question: 'q', status: 'entregado', created_at: 't' }];
-    if (p.startsWith('claude_deliveries?select')) return [{ id: 'd1', request_id: 'r1', author: 'claude', body: 'b', evidence: [{ tipo: 'norma', ref: 'NIA 500' }], status: 'entregado', created_at: 't' }];
+    if (p.startsWith('claude_requests') && m === 'POST') { db.requests.push({ id: `r${db.requests.length + 1}`, requested_by: 'u1', status: 'pendiente', created_at: 't', ...o.body }); return null; }
+    if (p.startsWith('claude_requests?id=eq.') && m === 'PATCH') { Object.assign(db.requests.find((r) => r.id === p.split('eq.')[1]), o.body); return null; }
+    if (p.startsWith('claude_requests?select') && p.includes('status=in')) return db.requests.filter((r) => ['pendiente', 'en_proceso'].includes(r.status));
+    if (p.startsWith('claude_requests?select')) return db.requests;
+    if (p.startsWith('claude_deliveries') && m === 'POST') { db.deliveries.push({ id: `d${db.deliveries.length + 1}`, author: 'asistente', status: 'entregado', created_at: 't', ...o.body }); return null; }
+    if (p.startsWith('claude_deliveries?id=eq.') && m === 'PATCH') { Object.assign(db.deliveries.find((d) => d.id === p.split('eq.')[1]), o.body); return null; }
+    if (p.startsWith('claude_deliveries?select')) return db.deliveries;
     return null;
-  } };
+  };
+  return { db, sb: { rest } };
+}
+
+test('bandeja remota: la pregunta y la entrega viajan cifradas y solo se leen con la frase', async () => {
+  const { makeCipher } = await import('../js/core/crypto.js');
+  const { pendientes, tomar, entregar } = await import('../js/core/asistente.js');
+  const { db, sb } = fakeDb();
+  const FRASE = 'frase-de-prueba-larga-1';
   const api = await remoteBandeja(sb);
-  assert.equal(api.inbox.requests.length, 1);
-  assert.equal(api.inbox.deliveryOf('r1').evidence[0].ref, 'NIA 500');
+  await assert.rejects(api.ask({ kind: 'revisar', question: 'x' }), /Desbloquea/);
+  await api.unlock(makeCipher(FRASE));
   await assert.rejects(api.ask({ kind: 'revisar', question: ' ' }), /vacía/);
-  await api.ask({ kind: 'revisar', targetRef: null, question: 'hola' });
-  await api.decide('r1', true);
-  assert.ok(log.includes('POST claude_requests') && log.includes('PATCH claude_deliveries') && log.includes('PATCH claude_requests'));
+  await api.ask({ kind: 'revisar', targetRef: 'A1', question: 'Saldo confidencial de Cliente X' });
+  assert.ok(!JSON.stringify(db.requests).includes('confidencial'), 'la pregunta no llega legible a la base');
+  assert.equal(api.inbox.requests[0].question, 'Saldo confidencial de Cliente X');
+
+  // Claude (asistente) lee, toma y entrega con la misma frase del entorno
+  const claude = makeCipher(FRASE);
+  const [p] = await pendientes(sb, claude);
+  assert.equal(p.pregunta, 'Saldo confidencial de Cliente X');
+  await tomar(sb, p.id);
+  await assert.rejects(entregar(sb, claude, { org_id: 'o1', request_id: p.id, body: 'Todo bien' }), /evidencia/);
+  await entregar(sb, claude, { org_id: 'o1', request_id: p.id, body: 'Cuadra con la cédula', evidence: [{ tipo: 'celda', ref: 'A1!F10' }], draft: 'Nota borrador secreta' });
+  assert.ok(!JSON.stringify(db.deliveries).includes('Cuadra') && !JSON.stringify(db.deliveries).includes('secreta'), 'la entrega no llega legible');
+  assert.equal(db.deliveries[0].evidence[0].ref, 'A1!F10', 'la referencia a la evidencia sí queda visible');
+
+  await api.reload();
+  assert.equal(api.inbox.deliveryOf(p.id).body, 'Cuadra con la cédula');
+  assert.equal(api.inbox.deliveryOf(p.id).draft, 'Nota borrador secreta');
+  await api.decide(p.id, true);
+  assert.equal(db.requests[0].status, 'aceptado');
+});
+
+test('sin la frase se ve el marcador de contenido cifrado y con otra frase falla', async () => {
+  const { makeCipher } = await import('../js/core/crypto.js');
+  const { db, sb } = fakeDb();
+  const api = await remoteBandeja(sb);
+  await api.unlock(makeCipher('frase-de-prueba-larga-1'));
+  await api.ask({ kind: 'norma', question: 'Pregunta privada' });
+  const locked = await remoteBandeja(sb);
+  assert.match(locked.inbox.requests[0].question, /cifrado/);
+  await assert.rejects(locked.unlock(makeCipher('otra-frase-distinta-99')), /No se pudo descifrar/);
 });
 
 test('guardar y cargar papeles: la base solo recibe texto cifrado y el contenido regresa íntegro', async () => {
@@ -70,14 +111,17 @@ test('guardar y cargar papeles: la base solo recibe texto cifrado y el contenido
   } };
   const eng = { id: 'e1', org_id: 'o1' };
   const L = new Ledger(demoData());
-  const n = await savePapers(sb, eng, L, 'frase-de-prueba-larga-1');
+  const trabajo = { formatos: { frir: { answers: { c1: { valor: 'SI', ref: 'B-1', comentario: '' } } } }, legal: { answers: {}, confirmations: {} }, docs: { informe: { titulo: 'Texto confidencial del informe' } }, obligations: [], havad: { ventas: 123456 } };
+  const n = await savePapers(sb, eng, L, 'frase-de-prueba-larga-1', trabajo);
   assert.equal(n, L.papers.size);
   assert.ok(stored.every((r) => r.status === 'borrador' && r.version === 1 && r.ciphertext.startsWith('v1.')));
   assert.ok(!JSON.stringify(stored).includes('Caja general'), 'nada legible llega a la base');
   assert.ok(calls.includes('POST audit_log'));
-  const back = await loadPapers(sb, eng, 'frase-de-prueba-larga-1');
+  assert.ok(!JSON.stringify(stored).includes('Texto confidencial'), 'el trabajo también viaja cifrado');
+  const { ledger: back, workspace } = await loadPapers(sb, eng, 'frase-de-prueba-larga-1');
   assert.equal(back.papers.size, L.papers.size);
   assert.equal(back.get('BG').totals.contab, L.get('BG').totals.contab);
   assert.equal(back.adjustments.length, L.adjustments.length);
+  assert.deepEqual(workspace, trabajo);
   await assert.rejects(loadPapers(sb, eng, 'frase-incorrecta-123'), /No se pudo descifrar/);
 });
