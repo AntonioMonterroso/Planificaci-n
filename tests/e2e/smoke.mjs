@@ -112,6 +112,18 @@ await page.waitForTimeout(300);
 check((await page.locator('.banner.error').count()) > before, 'Equipo: la ausencia del encargado deja funciones sin responsable');
 await page.screenshot({ path: `${out}/05-equipo-oscuro.png`, fullPage: true });
 
+// ---- Generador de paquetes ----
+await page.goto(`${base}/${PAGE}#/cedulas/BG`);
+await page.waitForSelector('table.ledger');
+const errBefore = await page.locator('.banner.error').count();
+await page.locator('button', { hasText: 'B · Cuentas por cobrar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('a', { hasText: 'B1' }).count()) >= 1, 'Paquetes: el rubro generado aparece enlazado');
+check((await page.locator('.banner.error').count()) === errBefore, `Paquetes: no aparecen errores nuevos (${errBefore})`);
+await page.goto(`${base}/${PAGE}#/cedulas/B`);
+await page.waitForSelector('table.ledger');
+check((await page.locator('table.ledger tbody tr').count()) === 3, 'Paquetes: la sumaria lista sus analíticas');
+
 // ---- Bandeja de Claude ----
 await page.goto(`${base}/${PAGE}#/claude`);
 await page.waitForSelector('.bandeja-item');

@@ -16,7 +16,8 @@ import { demoInbox } from './demo/bandeja.js';
 import { Supabase } from './core/supabase.js';
 import { remoteBandeja, localBandeja } from './core/bandeja-remote.js';
 import { loginView } from './ui/login.js';
-import { copyText } from './ui/copy.js';
+import { withPackage, RUBROS } from './core/paquetes.js';
+import { copyText, toast } from './ui/copy.js';
 import { formatMoney, plainNumber, round2 } from './core/money.js';
 
 const root = document.documentElement;
@@ -54,6 +55,10 @@ const ctx = {
   eng: demoEngagement(today),
   bandeja: localBandeja(demoInbox(), 'u-campo'),
   sb: null,
+  generatePackage(code) {
+    try { ctx.ledger = withPackage(ctx.ledger, code); ctx.selection.clear(); toast(`Paquete de ${RUBROS[code].title} generado`); render(); }
+    catch (e) { toast(e.message); }
+  },
   loginError: null,
   async signIn(email, password) {
     await ctx.sb.signIn(email, password);

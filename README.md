@@ -23,6 +23,8 @@ node tests/e2e/smoke.mjs   # prueba en navegador (requiere Playwright)
 
 - **Bandeja de Claude** (`js/core/bandeja.js`, `supabase/migrations/0002_bandeja.sql`): solicitudes con contexto (cédula/celda), entregas que **citan evidencia o declaran el dato faltante**, borrador que solo se aplica al aceptar. Claude no decide su propia entrega; en la base lo imponen RLS y triggers (probado en PostgreSQL local).
 
+- **Generador de paquetes por rubro** (`js/core/paquetes.js`): desde la centralizadora, un clic crea sumaria › analíticas › subanalíticas enlazadas del rubro (cuentas por cobrar, inventarios, PPE, cuentas por pagar, patrimonio). El saldo que ya tenía la línea se traslada con su documento de origen y los ajustes se reubican; la centralizadora sigue cuadrando. Es estructura, sin cifras ni criterios legales.
+
 ## Conectar a Supabase (opcional)
 
 Sin configuración la app corre en modo demostración. Para conectarla: copia `js/config.example.js` como `js/config.local.js` (ignorado por git) con la URL y la clave **anon** del proyecto, aplica `supabase/migrations/*.sql` y crea los usuarios en Auth. Entra con usuario y contraseña; la bandeja lee y escribe en la base y es la RLS quien decide qué ves y qué puedes hacer. Nunca uses aquí la clave `service_role`. La CSP de `index.html` solo permite conectar al dominio del proyecto.

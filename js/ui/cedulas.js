@@ -5,6 +5,7 @@ import { icon } from './icons.js';
 import { formatMoney, plainNumber, round2, parseMoney } from '../core/money.js';
 import { copyButton, copyText, tableToTSV, toast } from './copy.js';
 import { pageHead, card, banner, chip, fold, btn } from './kit.js';
+import { RUBROS, pendingRubros } from '../core/paquetes.js';
 
 export const MARKS = [
   ['≤', 'Sumado horizontal (verificado por el motor)'],
@@ -84,12 +85,17 @@ export function cedulasView(ctx, wanted) {
   const quick = kids.length ? h('div', { class: 'row' }, h('span', { class: 'tiny' }, 'Detalle en:'),
     kids.map((k) => h('a', { class: 'link-btn', href: `#/cedulas/${encodeURIComponent(k.ref)}`, title: k.title }, k.ref, icon('chevron', 12)))) : null;
   const tree = h('div', { class: 'tree' }, treeList(ctx, L.roots(), ref));
+  const pending = paper.kind === 'centralizadora' ? pendingRubros(L) : [];
+  const generator = pending.length ? card({ title: 'Generar paquetes por rubro' },
+    h('p', { class: 'tiny' }, 'Crea la sumaria, las analíticas y las subanalíticas del rubro, enlazadas a la centralizadora. El saldo que ya tiene la línea pasa a la primera cédula hoja con su documento de origen, y la centralizadora sigue cuadrando.'),
+    h('div', { class: 'row' }, pending.map((c) => btn(`${c} · ${RUBROS[c].title}`, { iconName: 'plus', cls: 'sm', onClick: () => ctx.generatePackage(c) })))) : null;
 
   return h('div', { class: 'view' },
     head,
     quick,
     banners,
     table,
+    generator,
     fold('Ajustes y reclasificaciones', adjustmentsBody(ctx, ref), { badge: adjCount(L, ref) }),
     fold('Marcas de auditoría', marksBody()),
     fold('Árbol de cédulas', tree));
