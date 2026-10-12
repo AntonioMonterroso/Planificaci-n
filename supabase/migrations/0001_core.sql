@@ -37,7 +37,7 @@ create table audit_log (
   at timestamptz not null default now());
 
 -- ---------- ayudantes (security definer: evitan recursión de RLS) ----------
-create function auth_uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+create function auth_uid() returns uuid language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''), nullif(current_setting('request.jwt.claims', true), '')::json ->> 'sub')::uuid $$;
 create function my_role(p_org uuid) returns app_role language sql stable security definer set search_path = public as $$
   select role from members where org_id = p_org and user_id = auth_uid() $$;
 create function on_team(p_eng uuid) returns boolean language sql stable security definer set search_path = public as $$
@@ -91,7 +91,7 @@ end $$;
 create trigger papers_guard_t before update or delete on papers for each row execute function papers_guard();
 
 -- ---------- bitácora: solo inserción, hashes encadenados ----------
-create function log_chain() returns trigger language plpgsql security definer set search_path = public as $$
+create function log_chain() returns trigger language plpgsql security definer set search_path = public, extensions as $$
 declare prev text;
 begin
   perform pg_advisory_xact_lock(hashtext(new.org_id::text));
@@ -105,7 +105,7 @@ create trigger log_chain_t before insert on audit_log for each row execute funct
 create function log_immutable() returns trigger language plpgsql as $$ begin raise exception 'La bitácora es de solo inserción'; end $$;
 create trigger log_immutable_t before update or delete on audit_log for each row execute function log_immutable();
 
-create function verify_log(p_org uuid) returns boolean language plpgsql stable security definer set search_path = public as $$
+create function verify_log(p_org uuid) returns boolean language plpgsql stable security definer set search_path = public, extensions as $$
 declare r audit_log; prev text := repeat('0', 64);
 begin
   if my_role(p_org) not in ('socio','gerente','admin') then raise exception 'Sin permiso'; end if;
