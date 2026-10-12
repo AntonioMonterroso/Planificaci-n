@@ -1,0 +1,121 @@
+/* Tokens de diseño v2 · identidad Monterroso.
+   Capas: fondo → superficie (tarjeta) → superficie-2 (campos) → superficie-3 (hover/encabezados).
+   Oro = acción, selección y foco. Pasteles = solo estados (generados en OKLCH con igual luminosidad y croma).
+   Oscuro es la referencia; claro es marfil neutro. Los dos bloques oscuros deben ser idénticos
+   (lo verifica tests/contrast.test.mjs, que también exige contraste AA). */
+:root {
+  color-scheme: light;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* espaciado (4 px) */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  --radius: 16px; --radius-sm: 10px; --radius-lg: 22px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-w: 276px;
+  --gutter: 16px;
+
+  --bg: #f5f4f1;
+  --bg-glow: rgba(214, 178, 111, 0.14);
+  --surface: #ffffff;
+  --surface-solid: #ffffff;
+  --surface-2: #f0eee9;
+  --surface-3: #e7e4dd;
+  --border: rgba(35, 28, 15, 0.10);
+  --border-strong: rgba(120, 90, 30, 0.30);
+  --text: #1b1a17;
+  --text-2: #4f4c45;
+  --text-3: #66625a;
+  --shadow: 0 1px 2px rgba(40, 30, 10, 0.05), 0 6px 18px rgba(40, 30, 10, 0.05);
+  --shadow-hover: 0 2px 6px rgba(40, 30, 10, 0.08), 0 14px 32px rgba(40, 30, 10, 0.10);
+
+  /* oro de marca */
+  --accent: #9c7a37;
+  --accent-text: #7e5d14;
+  --accent-soft: rgba(188, 153, 86, 0.18);
+  --accent-soft-ink: #6b4c0f;
+  --btn-from: #f0cb88;
+  --btn-to: #d6b26f;
+  --btn-ink: #1a1508;
+
+  /* estados: fondo + tinta */
+  --mint: #dff7e8; --mint-ink: #005d37;
+  --rose: #ffe8eb; --rose-ink: #793240;
+  --sun: #f9efd8;  --sun-ink: #644800;
+  --sky: #dff3ff;  --sky-ink: #0b517f;
+  --lav: #f1ecff;  --lav-ink: #52407d;
+  --peach: #ffebde; --peach-ink: #773a10;
+  --ok: var(--mint-ink); --warn: var(--sun-ink); --bad: var(--rose-ink);
+
+  /* barra lateral (siempre carbón) */
+  --sb-bg: #121215;
+  --sb-bg-2: #19191d;
+  --sb-border: rgba(255, 255, 255, 0.08);
+  --sb-text: #f3f0ea;
+  --sb-text-2: #c0bbb0;
+  --sb-text-3: #9a958a;
+  --sb-gold: #d6b26f;
+  --sb-active-bg: rgba(214, 178, 111, 0.16);
+  --sb-active-ink: #f0cb88;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e0e10;
+  --bg-glow: rgba(214, 178, 111, 0.09);
+  --surface: #161619;
+  --surface-solid: #161619;
+  --surface-2: #1d1d22;
+  --surface-3: #26262c;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(214, 178, 111, 0.30);
+  --text: #f3f0ea;
+  --text-2: #c0bbb0;
+  --text-3: #a09b90;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.6), 0 16px 36px rgba(0, 0, 0, 0.5);
+
+  --accent: #d6b26f;
+  --accent-text: #d6b26f;
+  --accent-soft: rgba(214, 178, 111, 0.15);
+  --accent-soft-ink: #f0cb88;
+
+  --mint: #112d1e; --mint-ink: #9bdcb6;
+  --rose: #391d21; --rose-ink: #fcb4be;
+  --sun: #302509;  --sun-ink: #e2c88a;
+  --sky: #12283b;  --sky-ink: #9cd1ff;
+  --lav: #28223a;  --lav-ink: #cec0fd;
+  --peach: #381f11; --peach-ink: #f9bb99;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e0e10;
+    --bg-glow: rgba(214, 178, 111, 0.09);
+    --surface: #161619;
+    --surface-solid: #161619;
+    --surface-2: #1d1d22;
+    --surface-3: #26262c;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(214, 178, 111, 0.30);
+    --text: #f3f0ea;
+    --text-2: #c0bbb0;
+    --text-3: #a09b90;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.6), 0 16px 36px rgba(0, 0, 0, 0.5);
+
+    --accent: #d6b26f;
+    --accent-text: #d6b26f;
+    --accent-soft: rgba(214, 178, 111, 0.15);
+    --accent-soft-ink: #f0cb88;
+
+    --mint: #112d1e; --mint-ink: #9bdcb6;
+    --rose: #391d21; --rose-ink: #fcb4be;
+    --sun: #302509;  --sun-ink: #e2c88a;
+    --sky: #12283b;  --sky-ink: #9cd1ff;
+    --lav: #28223a;  --lav-ink: #cec0fd;
+    --peach: #381f11; --peach-ink: #f9bb99;
+  }
+}

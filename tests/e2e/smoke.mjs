@@ -1,0 +1,292 @@
+// Prueba de humo en navegador real. Uso: node tests/e2e/smoke.mjs [urlBase] [dirCapturas]
+// Requiere Playwright (PLAYWRIGHT_PATH para indicar su ruta) y el sitio sirviéndose (npm run serve).
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PLAYWRIGHT_PATH ?? '/opt/node-tools/node_modules/playwright');
+
+const base = process.argv[2] ?? 'http://localhost:8080';
+const PAGE = process.env.PAGE ?? 'index.html';
+const out = process.argv[3] ?? '/tmp';
+const problems = [];
+const check = (ok, msg) => { console.log(`${ok ? 'OK ' : 'FALLA'}  ${msg}`); if (!ok) problems.push(msg); };
+
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'], colorScheme: 'dark' });
+const page = await ctx.newPage();
+const logs = [];
+// En modo demostración la configuración opcional (config.local.js) no existe: ese 404 es esperado.
+const optional404 = new Set();
+const isOptional404 = (l) => /Failed to load resource.*404/.test(l) && optional404.size > 0;
+ctx.on('response', (r) => { if (r.status() === 404 && /config\.local\.js$/.test(r.url())) optional404.add(r.url()); });
+page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) logs.push(`${m.type()}: ${m.text()}`); });
+page.on('pageerror', (e) => logs.push(`pageerror: ${e.message}`));
+const gaps = (p) => p.evaluate(() => { const k = [...document.querySelectorAll('.view > *')]; return k.slice(1).map((el, i) => Math.round(el.getBoundingClientRect().top - k[i].getBoundingClientRect().bottom)); });
+
+// ---- Tablero ----
+await page.goto(`${base}/${PAGE}#/tablero`);
+await page.waitForSelector('.stat .num');
+await page.waitForTimeout(1100);
+await page.screenshot({ path: `${out}/01-tablero-oscuro.png`, fullPage: true });
+check((await page.locator('.nav a').count()) >= 18, 'navegación con todos los paneles');
+check(/^(assets\/logo\.webp|data:image\/webp)/.test(await page.locator('.logo-plate img').getAttribute('src')), 'el tablero muestra el logo completo');
+check((await page.locator('.brand-name').textContent()) === 'Monterroso', 'lockup de marca en la barra lateral');
+check((await gaps(page)).every((g) => g >= 20), `secciones separadas por ≥ 20 px (${(await gaps(page)).join(', ')})`);
+
+// ---- Cédulas ----
+await page.goto(`${base}/${PAGE}#/cedulas/A1-1`);
+await page.waitForSelector('table.ledger');
+check((await page.locator('.crumbs .cur').textContent()) === 'A1-1', 'breadcrumb muestra A1-1');
+check((await page.locator('.crumbs a').allTextContents()).join(',').includes('BG'), 'breadcrumb ofrece subir a BG');
+check((await gaps(page)).every((g) => g >= 20), 'cédulas: secciones separadas');
+
+const row = page.locator('tr[data-key="efectivo"]');
+const input = row.locator('input.cell-in');
+await input.click(); await input.fill('=1000+2500+250.5'); await input.press('Enter');
+await page.waitForTimeout(300);
+check((await page.locator('tr[data-key="efectivo"] input').inputValue()) === 'Q3,750.50', 'la celda calcula =1000+2500+250.5 -> Q3,750.50');
+check((await page.locator('tr[data-key="efectivo"] .fx').count()) === 1, 'aparece el indicador ƒ con componentes');
+const tot = await page.locator('table.ledger tfoot tr td').nth(1).textContent();
+check(tot.includes('6,101.00'), `el total sube (${tot})`);
+
+const inp2 = page.locator('tr[data-key="efectivo"] input.cell-in');
+await inp2.click(); await inp2.fill('=alert(1)'); await inp2.press('Enter');
+await page.waitForTimeout(200);
+check((await inp2.getAttribute('class')).includes('err'), 'expresión maliciosa se rechaza');
+await inp2.fill('Q3,750.50'); await inp2.press('Enter');
+
+await page.locator('summary', { hasText: 'Marcas de auditoría' }).click();
+await page.locator('.mark-item', { hasText: 'Documento verificado' }).locator('button').click();
+check((await page.evaluate(() => navigator.clipboard.readText())) === '¥', 'copiar marca ¥');
+await page.locator('button', { hasText: 'Copiar tabla' }).click();
+const tsv = await page.evaluate(() => navigator.clipboard.readText());
+check(tsv.split('\n').length >= 5 && tsv.includes('\t'), 'copiar tabla produce texto tabulado');
+
+await page.locator('tr[data-key="efectivo"] td.cell-pick').first().click({ modifiers: ['Control'] });
+await page.locator('tr[data-key="cheques"] td.cell-pick').first().click({ modifiers: ['Control'] });
+await page.waitForSelector('#statusbar:not([hidden])');
+check((await page.locator('#statusbar').textContent()).includes('Q5,801.00'), 'barra de suma de celdas');
+await page.screenshot({ path: `${out}/02-cedula-oscuro.png`, fullPage: true });
+
+await page.goto(`${base}/${PAGE}#/cedulas/A`);
+await page.waitForSelector('table.ledger');
+await page.locator('summary', { hasText: 'Ajustes y reclasificaciones' }).click();
+await page.selectOption('#adj-debe', 'A1-2|fondo');
+await page.selectOption('#adj-haber', 'A1-1|efectivo');
+await page.fill('#adj-amt', '=100+50'); await page.fill('#adj-memo', 'Prueba');
+await page.locator('button', { hasText: 'Registrar partida' }).click();
+await page.waitForTimeout(300);
+await page.locator('summary', { hasText: 'Ajustes y reclasificaciones' }).click();
+check((await page.locator('.banner.ok b', { hasText: 'AJ-2' }).count()) > 0, 'se registra la partida AJ-2');
+
+// ---- Perfil del encargo ----
+await page.goto(`${base}/${PAGE}#/perfil`);
+await page.waitForSelector('.tl-track');
+await page.waitForTimeout(800);
+check((await page.locator('.tl-pin').count()) >= 6, 'línea de tiempo con hitos');
+check((await page.locator('.ph').count()) === 6, 'seis fases');
+check((await page.locator('.kv .k', { hasText: 'Armado del archivo' }).count()) === 1, 'plazo de armado del archivo');
+check((await gaps(page)).every((g) => g >= 20), 'perfil: secciones separadas');
+await page.screenshot({ path: `${out}/03-perfil-oscuro.png`, fullPage: true });
+
+// ---- Documentos del cliente ----
+await page.goto(`${base}/${PAGE}#/pbc`);
+await page.waitForSelector('table.tbl');
+await page.waitForTimeout(600);
+await page.locator('tr', { hasText: 'Libro mayor del ejercicio' }).click();
+await page.locator('button', { hasText: 'Registrar recepción' }).click();
+await page.waitForTimeout(200);
+check((await page.locator('.card-head .chip', { hasText: 'Recibido' }).count()) === 1, 'PBC: recepción registrada');
+await page.locator('button', { hasText: 'Iniciar verificación' }).click();
+await page.waitForTimeout(200);
+await page.locator('button', { hasText: 'Aceptar documento' }).click();
+await page.waitForTimeout(200);
+check((await page.locator('.toast').count()) > 0, 'PBC: no se acepta sin verificaciones');
+await page.screenshot({ path: `${out}/04-pbc-oscuro.png`, fullPage: true });
+
+// ---- Equipo ----
+await page.goto(`${base}/${PAGE}#/equipo`);
+await page.waitForSelector('.occ');
+const before = await page.locator('.banner.error').count();
+await page.locator('tr', { hasText: 'Encargado (demo)' }).locator('button', { hasText: 'Ausente 14 d' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.banner.error').count()) > before, 'Equipo: la ausencia del encargado deja funciones sin responsable');
+await page.screenshot({ path: `${out}/05-equipo-oscuro.png`, fullPage: true });
+
+// ---- Generador de paquetes ----
+await page.goto(`${base}/${PAGE}#/cedulas/BG`);
+await page.waitForSelector('table.ledger');
+const errBefore = await page.locator('.banner.error').count();
+await page.locator('button', { hasText: 'B · Cuentas por cobrar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('a', { hasText: 'B1' }).count()) >= 1, 'Paquetes: el rubro generado aparece enlazado');
+check((await page.locator('.banner.error').count()) === errBefore, `Paquetes: no aparecen errores nuevos (${errBefore})`);
+await page.goto(`${base}/${PAGE}#/cedulas/B`);
+await page.waitForSelector('table.ledger');
+check((await page.locator('table.ledger tbody tr').count()) === 3, 'Paquetes: la sumaria lista sus analíticas');
+
+// ---- Analíticos ----
+await page.goto(`${base}/${PAGE}#/analiticos`);
+await page.waitForSelector('table.tbl');
+check((await page.locator('table.tbl tbody tr', { hasText: /veces|días|%/ }).count()) === 15, 'Analíticos: se muestran los 15 ratios calculados');
+await page.fill('#hv-inventarios', '');
+await page.press('#hv-inventarios', 'Tab');
+await page.waitForTimeout(300);
+check((await page.locator('.banner.warn').count()) === 1 && (await page.locator('.tiny', { hasText: 'Falta: Inventarios' }).count()) >= 1, 'Analíticos: sin dato no se inventa el ratio');
+
+// ---- Calendario ----
+await page.goto(`${base}/${PAGE}#/calendario`);
+await page.waitForSelector('.occ');
+const evs = await page.locator('.occ').count();
+await page.fill('#ob-title', 'Obligación de prueba'); await page.fill('#ob-date', '2026-12-31');
+await page.locator('button', { hasText: 'Registrar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.occ').count()) === evs, 'Calendario: sin fuente oficial no se registra la obligación');
+await page.fill('#ob-title', 'Obligación de prueba'); await page.fill('#ob-date', '2026-12-31'); await page.fill('#ob-source', 'Fuente de prueba');
+await page.locator('button', { hasText: 'Registrar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.occ').count()) === evs + 1 && (await page.locator('.chip', { hasText: 'Sin validar' }).count()) === 1, 'Calendario: la obligación con fuente queda sin validar');
+
+// ---- Biblioteca de formatos ----
+await page.goto(`${base}/${PAGE}#/biblioteca`);
+await page.waitForSelector('#bib-q');
+await page.fill('#bib-q', 'inexistente-xyz');
+check((await page.locator('text=Ningún formato coincide').count()) === 1, 'Biblioteca: la búsqueda filtra los formatos');
+await page.goto(`${base}/${PAGE}#/biblioteca/frir`);
+await page.waitForSelector('.occ');
+check((await page.locator('.occ').count()) === 33, 'Biblioteca: el cuestionario muestra sus 33 preguntas');
+await page.locator('.occ').first().locator('button', { hasText: 'SI' }).click();
+await page.waitForTimeout(200);
+check((await page.locator('text=Falta la referencia a papel de trabajo').count()) === 1, 'Biblioteca: un SI sin origen se señala');
+await page.locator('.occ').first().locator('input[placeholder="Ref. P/T"]').fill('B-12');
+await page.locator('.occ').first().locator('input[placeholder="Ref. P/T"]').press('Tab');
+await page.waitForTimeout(200);
+check((await page.locator('text=Falta la referencia a papel de trabajo').count()) === 0, 'Biblioteca: con referencia deja de señalarse');
+check((await page.locator('.chip', { hasText: 'No se puede cerrar' }).count()) === 1, 'Biblioteca: no se cierra con pendientes');
+
+// ---- Cumplimiento legal ----
+await page.goto(`${base}/${PAGE}#/legal`);
+await page.waitForSelector('.card');
+check((await page.locator('a.btn', { hasText: 'Abrir' }).count()) >= 4, 'Legal: se listan las áreas que aplican al perfil');
+await page.locator('button', { hasText: 'Sujeto obligado en prevención de lavado de activos' }).click();
+await page.waitForTimeout(200);
+check((await page.locator('.chip', { hasText: 'Alerta de norma' }).count()) === 1, 'Legal: el área de lavado muestra la alerta de la ley nueva');
+await page.goto(`${base}/${PAGE}#/legal/lavado`);
+await page.waitForSelector('.occ');
+check((await page.locator('.chip', { hasText: 'Alerta' }).count()) >= 1 && (await page.locator('a', { hasText: 'Abrir la fuente oficial' }).count()) === 2, 'Legal: las normas muestran su fuente y su alerta');
+await page.goto(`${base}/${PAGE}#/legal/nomina`);
+await page.waitForSelector('.banner.warn');
+check((await page.locator('text=Norma por citar').count()) >= 1, 'Legal: un área sin fuente dice "Norma por citar"');
+
+// ---- Informe y cartas ----
+await page.goto(`${base}/${PAGE}#/informe/carta_gerencia`);
+await page.waitForSelector('textarea');
+check((await page.locator('.banner.warn').count()) === 1, 'Informe: se muestran los pendientes antes de firmar');
+await page.locator('textarea').nth(1).fill('Hallazgo de prueba < con símbolos & texto.');
+await page.locator('textarea').nth(1).press('Tab');
+await page.waitForTimeout(200);
+await page.locator('button', { hasText: 'Firmar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.chip', { hasText: 'Firmado' }).count()) === 0, 'Informe: no se firma con verificaciones pendientes');
+const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('button', { hasText: 'Descargar para Word' }).click()]);
+const html = await (await import('node:fs/promises')).readFile(await dl.path(), 'utf-8');
+check(html.includes('BORRADOR') && html.includes('&lt; con símbolos &amp;') && !html.includes('<script'), 'Informe: la exportación sale marcada como borrador y escapada');
+
+// ---- Bandeja de Claude ----
+await page.goto(`${base}/${PAGE}#/claude`);
+await page.waitForSelector('.bandeja-item');
+const items0 = await page.locator('.bandeja-item').count();
+await page.fill('#b-q', '¿Qué documentos faltan para cerrar Bancos?');
+await page.locator('button', { hasText: 'Enviar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.bandeja-item').count()) === items0 + 1, 'Bandeja: la solicitud nueva aparece como pendiente');
+await page.locator('button', { hasText: 'Aceptar' }).first().click();
+await page.waitForTimeout(300);
+check((await page.locator('.chip', { hasText: 'Aceptado' }).count()) >= 1, 'Bandeja: el auditor acepta la entrega');
+await page.screenshot({ path: `${out}/05b-bandeja-oscuro.png`, fullPage: true });
+
+// ---- Conexión a Supabase (simulada) ----
+{
+  const c = await browser.newContext({ viewport: { width: 1200, height: 800 } });
+  const sp = await c.newPage();
+  const errs = [];
+  sp.on('pageerror', (e) => errs.push(e.message));
+  sp.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  const API = 'https://bumncmqqksbgwuadjlkb.supabase.co';
+  await sp.route('**/js/config.local.js', (r) => r.fulfill({ contentType: 'text/javascript', body: `export const SUPABASE = { url: '${API}', anonKey: 'anon-prueba' };` }));
+  const reqs = [{ id: 'r1', requested_by: 'u1', kind: 'revisar', target_ref: 'A1', question: 'q simulada', status: 'entregado', created_at: '2026-01-01T00:00:00Z' }];
+  const dels = [{ id: 'd1', request_id: 'r1', author: 'claude', body: 'entrega simulada', evidence: [{ tipo: 'norma', ref: 'NIA 500' }], status: 'entregado', created_at: '2026-01-01T00:00:00Z' }];
+  const saved = [];
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
+  await sp.route(`${API}/**`, async (r) => {
+    const q = r.request(); const u = q.url();
+    if (q.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
+    const ok = (b) => r.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify(b) });
+    if (u.includes('/auth/v1/token')) return ok({ access_token: 'a', refresh_token: 'r', user: { id: 'u1', email: 'encargado@x.com' } });
+    if (u.includes('/rest/v1/engagements')) return ok([{ id: 'e1', org_id: 'o1', title: 'Encargo simulado' }]);
+    if (u.includes('/rest/v1/claude_requests') && q.method() === 'GET') return ok(reqs);
+    if (u.includes('/rest/v1/claude_deliveries') && q.method() === 'GET') return ok(dels);
+    if (u.includes('/rest/v1/papers') && q.method() === 'POST') { saved.push(...q.postDataJSON()); return r.fulfill({ status: 201, headers: cors }); }
+    if (u.includes('/rest/v1/papers') && q.method() === 'GET') return ok(saved.map(({ ref, ciphertext }) => ({ ref, ciphertext })));
+    return r.fulfill({ status: 204, headers: cors });
+  });
+  await sp.goto(`${base}/${PAGE}#/claude`);
+  await sp.waitForSelector('#l-email');
+  check(true, 'Supabase: sin sesión se muestra el inicio de sesión');
+  await sp.fill('#l-email', 'encargado@x.com'); await sp.fill('#l-pass', 'x');
+  await sp.locator('button', { hasText: 'Entrar' }).click();
+  await sp.waitForSelector('.bandeja-item');
+  check((await sp.locator('.bandeja-item', { hasText: 'entrega simulada' }).count()) === 1, 'Supabase: la bandeja muestra la entrega leída de la base');
+  check((await sp.locator('.sb-foot', { hasText: 'encargado@x.com' }).count()) === 1, 'Supabase: se muestra el usuario conectado');
+  await sp.goto(`${base}/${PAGE}#/cedulas/BG`);
+  await sp.waitForSelector('#sync-pass');
+  await sp.fill('#sync-pass', 'frase-de-prueba-larga-1');
+  await sp.locator('button', { hasText: 'Guardar' }).click();
+  await sp.waitForFunction(() => document.body.textContent.includes('papeles guardados cifrados'));
+  check(saved.length > 5 && saved.every((r) => r.ciphertext.startsWith('v1.')) && !JSON.stringify(saved).includes('Caja general'), 'Supabase: se guardan solo textos cifrados');
+  check((await sp.inputValue('#sync-pass')) === '', 'Supabase: la frase se borra de la pantalla tras usarla');
+  await sp.fill('#sync-pass', 'frase-de-prueba-larga-1');
+  await sp.locator('button', { hasText: 'Cargar' }).click();
+  await sp.waitForFunction(() => document.body.textContent.includes('Papeles cargados y descifrados'));
+  check(true, 'Supabase: los papeles se cargan y se descifran');
+  await sp.fill('#sync-pass', 'frase-equivocada-123');
+  await sp.locator('button', { hasText: 'Cargar' }).click();
+  await sp.waitForFunction(() => document.body.textContent.includes('No se pudo descifrar'));
+  check(true, 'Supabase: con frase incorrecta no se descifra');
+  check(errs.length === 0, `Supabase: sin errores ni violaciones de CSP (${errs.slice(0, 2).join(' | ')})`);
+  await c.close();
+}
+
+// ---- Claro ----
+await page.click('#theme-btn');
+await page.waitForTimeout(300);
+check((await page.getAttribute('html', 'data-theme')) === 'light', 'modo claro activo');
+await page.goto(`${base}/${PAGE}#/tablero`);
+await page.waitForTimeout(1100);
+await page.screenshot({ path: `${out}/06-tablero-claro.png`, fullPage: true });
+await page.goto(`${base}/${PAGE}#/cedulas/A1`);
+await page.waitForSelector('table.ledger');
+await page.screenshot({ path: `${out}/07-cedula-claro.png`, fullPage: true });
+
+// ---- Móvil ----
+const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 2, colorScheme: 'dark' });
+const mp = await m.newPage();
+mp.on('pageerror', (e) => logs.push(`pageerror(m): ${e.message}`));
+mp.on('console', (msg) => { if (['error', 'warning'].includes(msg.type())) logs.push(`m ${msg.type()}: ${msg.text()}`); });
+for (const [name, hash] of [['08-movil-tablero', 'tablero'], ['09-movil-cedula', 'cedulas/A1'], ['10-movil-perfil', 'perfil'], ['11-movil-pbc', 'pbc'], ['12-movil-equipo', 'equipo']]) {
+  await mp.goto(`${base}/${PAGE}#/${hash}`);
+  await mp.waitForSelector('#main > *');
+  await mp.waitForTimeout(900);
+  const over = await mp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check(over <= 1, `móvil ${hash}: sin scroll horizontal (${over}px)`);
+  await mp.screenshot({ path: `${out}/${name}.png`, fullPage: true });
+}
+await mp.click('#menu-btn'); await mp.waitForTimeout(500);
+await mp.screenshot({ path: `${out}/13-movil-menu.png` });
+
+const csp = logs.filter((l) => /Content Security Policy|Refused/i.test(l));
+check(csp.length === 0, `sin violaciones de CSP (${csp.length})`);
+const real = logs.filter((l) => !isOptional404(l));
+check(real.length === 0, `sin errores de consola (${real.length}) ${real.slice(0, 3).join(' | ')}`);
+await browser.close();
+if (problems.length) { console.error(`\n${problems.length} problema(s)`); process.exit(1); }
+console.log('\nTodo bien');

@@ -1,0 +1,30 @@
+# Secretos y entornos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+supabase/.temp/
+supabase/.branches/
+
+# Configuración local de Supabase (URL y clave pública del proyecto)
+js/config.local.js
+
+# Datos de clientes y archivos de trabajo: NUNCA al repositorio
+datos/
+clientes/
+encargos/
+descomp/
+*.xlsx
+*.xlsm
+*.xls
+*.docx
+*.doc
+*.pdf
+*.zip
+
+# Local
+node_modules/
+.DS_Store
+*.log
+.wrangler/
