@@ -16,6 +16,8 @@ import { demoInbox } from './demo/bandeja.js';
 import { Supabase } from './core/supabase.js';
 import { remoteBandeja, localBandeja } from './core/bandeja-remote.js';
 import { loginView } from './ui/login.js';
+import { analiticosView } from './ui/analiticos.js';
+import { demoInputs } from './demo/havad.js';
 import { withPackage, RUBROS } from './core/paquetes.js';
 import { copyText, toast } from './ui/copy.js';
 import { formatMoney, plainNumber, round2 } from './core/money.js';
@@ -55,6 +57,7 @@ const ctx = {
   eng: demoEngagement(today),
   bandeja: localBandeja(demoInbox(), 'u-campo'),
   sb: null,
+  havad: demoInputs(),
   generatePackage(code) {
     try { ctx.ledger = withPackage(ctx.ledger, code); ctx.selection.clear(); toast(`Paquete de ${RUBROS[code].title} generado`); render(); }
     catch (e) { toast(e.message); }
@@ -138,6 +141,7 @@ function render() {
   else if (item.id === 'pbc') el = pbcView(ctx);
   else if (item.id === 'equipo') el = equipoView(ctx);
   else if (item.id === 'claude') el = bandejaView(ctx);
+  else if (item.id === 'analiticos') el = analiticosView(ctx);
   else el = soonView(item);
   const y = scrollY;
   mount(view, el);

@@ -124,6 +124,15 @@ await page.goto(`${base}/${PAGE}#/cedulas/B`);
 await page.waitForSelector('table.ledger');
 check((await page.locator('table.ledger tbody tr').count()) === 3, 'Paquetes: la sumaria lista sus analíticas');
 
+// ---- Analíticos ----
+await page.goto(`${base}/${PAGE}#/analiticos`);
+await page.waitForSelector('table.tbl');
+check((await page.locator('table.tbl tbody tr', { hasText: /veces|días|%/ }).count()) === 15, 'Analíticos: se muestran los 15 ratios calculados');
+await page.fill('#hv-inventarios', '');
+await page.press('#hv-inventarios', 'Tab');
+await page.waitForTimeout(300);
+check((await page.locator('.banner.warn').count()) === 1 && (await page.locator('.tiny', { hasText: 'Falta: Inventarios' }).count()) >= 1, 'Analíticos: sin dato no se inventa el ratio');
+
 // ---- Bandeja de Claude ----
 await page.goto(`${base}/${PAGE}#/claude`);
 await page.waitForSelector('.bandeja-item');

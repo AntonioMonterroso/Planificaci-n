@@ -13,7 +13,7 @@ export const NAV = [
   { group: 'Auditoría', items: [
     { id: 'cedulas', icon: 'grid', label: 'Cédulas', ready: true },
     { id: 'riesgos', icon: 'flag', label: 'Riesgos y materialidad', desc: 'Evaluación de riesgos, fraude (NIA 240), materialidad y respuestas (NIA 315/320/330).' },
-    { id: 'analiticos', icon: 'chart', label: 'Analíticos HAVAD', desc: '15 ratios con DuPont y gráficos, calculados en el navegador.' },
+    { id: 'analiticos', icon: 'chart', label: 'Analíticos HAVAD', ready: true, desc: '15 ratios con DuPont y gráficos, calculados en el navegador.' },
     { id: 'ajustes', icon: 'plusminus', label: 'Ajustes', desc: 'Libro de partidas con control de cuadre y aprobación.' },
     { id: 'hallazgos', icon: 'edit', label: 'Hallazgos y cartas', desc: 'Hallazgos, recomendaciones, divulgaciones y carta de gerencia, editables.' },
     { id: 'cierre', icon: 'check', label: 'Cierre', desc: 'Hechos posteriores, empresa en funcionamiento, representación y lista de verificación.' },
