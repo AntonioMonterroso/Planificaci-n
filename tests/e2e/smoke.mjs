@@ -163,6 +163,20 @@ await page.waitForTimeout(200);
 check((await page.locator('text=Falta la referencia a papel de trabajo').count()) === 0, 'Biblioteca: con referencia deja de señalarse');
 check((await page.locator('.chip', { hasText: 'No se puede cerrar' }).count()) === 1, 'Biblioteca: no se cierra con pendientes');
 
+// ---- Cumplimiento legal ----
+await page.goto(`${base}/${PAGE}#/legal`);
+await page.waitForSelector('.card');
+check((await page.locator('a.btn', { hasText: 'Abrir' }).count()) >= 4, 'Legal: se listan las áreas que aplican al perfil');
+await page.locator('button', { hasText: 'Sujeto obligado en prevención de lavado de activos' }).click();
+await page.waitForTimeout(200);
+check((await page.locator('.chip', { hasText: 'Alerta de norma' }).count()) === 1, 'Legal: el área de lavado muestra la alerta de la ley nueva');
+await page.goto(`${base}/${PAGE}#/legal/lavado`);
+await page.waitForSelector('.occ');
+check((await page.locator('.chip', { hasText: 'Alerta' }).count()) >= 1 && (await page.locator('a', { hasText: 'Abrir la fuente oficial' }).count()) === 2, 'Legal: las normas muestran su fuente y su alerta');
+await page.goto(`${base}/${PAGE}#/legal/nomina`);
+await page.waitForSelector('.banner.warn');
+check((await page.locator('text=Norma por citar').count()) >= 1, 'Legal: un área sin fuente dice "Norma por citar"');
+
 // ---- Bandeja de Claude ----
 await page.goto(`${base}/${PAGE}#/claude`);
 await page.waitForSelector('.bandeja-item');

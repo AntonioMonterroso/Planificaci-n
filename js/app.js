@@ -19,6 +19,7 @@ import { loginView } from './ui/login.js';
 import { analiticosView } from './ui/analiticos.js';
 import { calendarioView } from './ui/calendario.js';
 import { bibliotecaView } from './ui/biblioteca.js';
+import { legalView } from './ui/legal.js';
 import { savePapers, loadPapers } from './core/papers-remote.js';
 import { demoInputs } from './demo/havad.js';
 import { withPackage, RUBROS } from './core/paquetes.js';
@@ -149,6 +150,7 @@ function render() {
   else if (item.id === 'analiticos') el = analiticosView(ctx);
   else if (item.id === 'calendario') el = calendarioView(ctx);
   else if (item.id === 'biblioteca') el = bibliotecaView(ctx, arg);
+  else if (item.id === 'legal') el = legalView(ctx, arg);
   else el = soonView(item);
   const y = scrollY;
   mount(view, el);

@@ -20,7 +20,7 @@ export const NAV = [
     { id: 'informe', icon: 'file', label: 'Informe y opinión', desc: 'Informe y opinión (NIA 700/705/706) con plantillas editables y exportación.' },
   ] },
   { group: 'Cumplimiento', items: [
-    { id: 'legal', icon: 'scale', label: 'Cumplimiento legal', desc: 'SAT, IGSS, Código de Comercio, lavado de activos y más: por separado y en conjunto.' },
+    { id: 'legal', icon: 'scale', label: 'Cumplimiento legal', ready: true, desc: 'SAT, IGSS, Código de Comercio, lavado de activos y más: por separado y en conjunto.' },
     { id: 'calendario', icon: 'calendar', label: 'Calendario', ready: true, desc: 'Vencimientos fiscales, laborales y plazos del encargo.' },
     { id: 'biblioteca', icon: 'book', label: 'Biblioteca', ready: true, desc: 'Guías, políticas y buenas prácticas con búsqueda.' },
   ] },
