@@ -27,6 +27,13 @@ AuditOS es una plataforma de auditoría externa (NIA + NIIF PYMES, Guatemala). C
 - JS sin dependencias y sin `eval`; el DOM se construye con `h()` (nunca `innerHTML`); CSP estricta (sin estilos ni scripts en línea).
 - Pruebas: `npm test` (unitarias) y `node tests/e2e/smoke.mjs` (navegador). Todo cambio del motor lleva prueba.
 
+## Identidad visual (logo Monterroso)
+
+- Paleta: carbón + oro champaña de marca; pasteles apagados solo para estados (menta = ok, rosa = error, arena = alerta, cielo = info, lavanda = neutro, durazno = fórmulas). Oscuro es la referencia de diseño; claro es marfil cálido.
+- Todo color sale de `css/tokens.css` (nunca hex sueltos en componentes). Si cambias un token, `npm test` verifica contraste WCAG AA en ambos temas.
+- Barra lateral siempre carbón; el logo va sobre una placa marfil (sus letras son negras). Títulos en serif, cuerpo en sans del sistema; sin fuentes externas (CSP).
+- Assets de marca en `assets/` (logo, monograma, favicon): son de la firma, no datos de clientes.
+
 ## Datos y confidencialidad
 
 - **Nunca** commitear datos de clientes, nombres, NIT, cuentas bancarias, claves ni archivos `.xlsx/.docx/.pdf/.zip` (ver `.gitignore`). Datos de prueba: solo sintéticos (`js/demo/`).

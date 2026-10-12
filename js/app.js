@@ -78,7 +78,10 @@ function buildNav(current) {
 }
 function renderSide(current) {
   mount(side,
-    h('div', { class: 'brand' }, h('div', { class: 'brand-logo', 'aria-hidden': 'true' }, 'A'), h('div', {}, h('b', {}, 'AuditOS'), h('small', {}, 'Auditoría externa · Guatemala'))),
+    h('div', { class: 'brand' },
+      h('a', { class: 'brand-plate', href: '#/tablero', 'aria-label': 'Monterroso, Firma de Auditoría: ir al tablero' },
+        h('img', { src: 'assets/logo.webp', alt: 'Monterroso · Firma de Auditoría, Auditores y Consultores', width: '900', height: '358' })),
+      h('div', { class: 'brand-sub' }, 'AuditOS')),
     buildNav(current),
     h('div', { class: 'tiny' }, 'v0.1 · demostración'));
 }

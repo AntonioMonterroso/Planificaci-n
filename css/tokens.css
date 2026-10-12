@@ -1,36 +1,47 @@
-/* Tokens de diseño. Claro por defecto; oscuro automático o manual (data-theme). */
+/* Tokens de diseño · identidad Monterroso (carbón + oro champaña, acentos pastel apagados).
+   Oscuro = referencia de diseño. Claro = marfil cálido. Automático según el sistema o manual (data-theme).
+   Los dos bloques oscuros deben ser idénticos (lo verifica tests/contrast.test.mjs). */
 :root {
   color-scheme: light;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --bg: #f5f5f9;
-  --bg-grad-a: #efeaff;
-  --bg-grad-b: #e6f6ff;
-  --surface: rgba(255, 255, 255, 0.78);
+  --bg: #f7f5f0;
+  --bg-glow: rgba(201, 160, 82, 0.16);
+  --bg-glow-2: rgba(120, 140, 170, 0.10);
+  --surface: rgba(255, 255, 255, 0.82);
   --surface-solid: #ffffff;
-  --surface-2: #f0f0f6;
-  --border: rgba(60, 60, 90, 0.12);
-  --text: #1d1d24;
-  --text-2: #5b5b6b;
-  --text-3: #8a8a99;
-  --shadow: 0 1px 2px rgba(40, 40, 80, 0.06), 0 8px 24px rgba(40, 40, 80, 0.07);
-  --shadow-hover: 0 2px 6px rgba(40, 40, 80, 0.08), 0 16px 36px rgba(40, 40, 80, 0.12);
+  --surface-2: #efece4;
+  --border: rgba(70, 52, 14, 0.13);
+  --text: #1c1b19;
+  --text-2: #55524a;
+  --text-3: #68645c;
+  --shadow: 0 1px 2px rgba(60, 44, 10, 0.06), 0 8px 24px rgba(60, 44, 10, 0.07);
+  --shadow-hover: 0 2px 6px rgba(60, 44, 10, 0.09), 0 16px 36px rgba(60, 44, 10, 0.13);
 
-  /* acentos pastel (fondo) + tinta legible (texto) */
-  --lav: #e4dcff;  --lav-ink: #5b43c9;
-  --mint: #d3f4e4; --mint-ink: #17744c;
-  --peach: #ffe3d2; --peach-ink: #a8481c;
-  --sky: #d4eaff;  --sky-ink: #1f63a8;
-  --rose: #ffdbe8; --rose-ink: #b02a5e;
-  --sun: #fff1c2;  --sun-ink: #8a6200;
+  /* oro de marca */
+  --accent: #a8792f;
+  --accent-text: #7d5a1f;
+  --accent-soft: rgba(201, 160, 82, 0.20);
+  --accent-soft-ink: #6e4f19;
+  --btn-from: #dcb96f;
+  --btn-to: #c9a052;
+  --btn-ink: #1a1508;
 
-  --accent: #7c6af2;
-  --accent-ink: #ffffff;
+  /* pasteles apagados: fondo + tinta legible */
+  --lav: #e9e4f7;  --lav-ink: #54449c;
+  --mint: #e0f0e6; --mint-ink: #1f6b45;
+  --peach: #fbe5d6; --peach-ink: #9a4a22;
+  --sky: #deebf7;  --sky-ink: #25587f;
+  --rose: #fbe1e6; --rose-ink: #a3304d;
+  --sun: #f8ecc9;  --sun-ink: #7a5a0d;
+
   --ok: var(--mint-ink);
   --warn: var(--sun-ink);
   --bad: var(--rose-ink);
 
+  --sidebar-bg: #16161a;
   --radius: 18px;
   --radius-sm: 12px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -40,51 +51,64 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0e0e14;
-  --bg-grad-a: #1a1530;
-  --bg-grad-b: #0d1a26;
-  --surface: rgba(30, 30, 42, 0.74);
-  --surface-solid: #1b1b26;
-  --surface-2: #242434;
-  --border: rgba(200, 200, 255, 0.12);
-  --text: #f1f1f7;
-  --text-2: #b4b4c6;
-  --text-3: #868699;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 36px rgba(0, 0, 0, 0.5);
+  --bg: #121214;
+  --bg-glow: rgba(212, 176, 114, 0.11);
+  --bg-glow-2: rgba(120, 140, 170, 0.07);
+  --surface: rgba(29, 29, 33, 0.80);
+  --surface-solid: #1d1d21;
+  --surface-2: #26262b;
+  --border: rgba(212, 176, 114, 0.14);
+  --text: #f2efe8;
+  --text-2: #bdb8ac;
+  --text-3: #9b968b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.55), 0 16px 36px rgba(0, 0, 0, 0.5);
 
-  --lav: #2c2552;  --lav-ink: #cbbfff;
-  --mint: #12362a; --mint-ink: #8ee3b9;
-  --peach: #3d2417; --peach-ink: #ffb78f;
-  --sky: #14304d;  --sky-ink: #9bd0ff;
-  --rose: #432032; --rose-ink: #ff9cc0;
-  --sun: #3d3212;  --sun-ink: #ffd96b;
-  --accent: #9a8bff;
-  --accent-ink: #14102c;
+  --accent: #d4b072;
+  --accent-text: #d4b072;
+  --accent-soft: rgba(212, 176, 114, 0.16);
+  --accent-soft-ink: #e6c88a;
+  --btn-from: #e3c283;
+  --btn-to: #c9a052;
+  --btn-ink: #1a1508;
+
+  --lav: #2a2638;  --lav-ink: #c9bff0;
+  --mint: #1f2e27; --mint-ink: #a9d9bd;
+  --peach: #3a2a22; --peach-ink: #f2bfa0;
+  --sky: #1f2b38;  --sky-ink: #a9cbe8;
+  --rose: #36232a; --rose-ink: #f0a9b8;
+  --sun: #352d1c;  --sun-ink: #f0cf8a;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0e0e14;
-    --bg-grad-a: #1a1530;
-    --bg-grad-b: #0d1a26;
-    --surface: rgba(30, 30, 42, 0.74);
-    --surface-solid: #1b1b26;
-    --surface-2: #242434;
-    --border: rgba(200, 200, 255, 0.12);
-    --text: #f1f1f7;
-    --text-2: #b4b4c6;
-    --text-3: #868699;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
-    --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 36px rgba(0, 0, 0, 0.5);
-    --lav: #2c2552;  --lav-ink: #cbbfff;
-    --mint: #12362a; --mint-ink: #8ee3b9;
-    --peach: #3d2417; --peach-ink: #ffb78f;
-    --sky: #14304d;  --sky-ink: #9bd0ff;
-    --rose: #432032; --rose-ink: #ff9cc0;
-    --sun: #3d3212;  --sun-ink: #ffd96b;
-    --accent: #9a8bff;
-    --accent-ink: #14102c;
+    --bg: #121214;
+    --bg-glow: rgba(212, 176, 114, 0.11);
+    --bg-glow-2: rgba(120, 140, 170, 0.07);
+    --surface: rgba(29, 29, 33, 0.80);
+    --surface-solid: #1d1d21;
+    --surface-2: #26262b;
+    --border: rgba(212, 176, 114, 0.14);
+    --text: #f2efe8;
+    --text-2: #bdb8ac;
+    --text-3: #9b968b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.55), 0 16px 36px rgba(0, 0, 0, 0.5);
+
+    --accent: #d4b072;
+    --accent-text: #d4b072;
+    --accent-soft: rgba(212, 176, 114, 0.16);
+    --accent-soft-ink: #e6c88a;
+    --btn-from: #e3c283;
+    --btn-to: #c9a052;
+    --btn-ink: #1a1508;
+
+    --lav: #2a2638;  --lav-ink: #c9bff0;
+    --mint: #1f2e27; --mint-ink: #a9d9bd;
+    --peach: #3a2a22; --peach-ink: #f2bfa0;
+    --sky: #1f2b38;  --sky-ink: #a9cbe8;
+    --rose: #36232a; --rose-ink: #f0a9b8;
+    --sun: #352d1c;  --sun-ink: #f0cf8a;
   }
 }

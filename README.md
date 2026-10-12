@@ -17,7 +17,7 @@ node tests/e2e/smoke.mjs   # prueba en navegador (requiere Playwright)
 - **Evaluador de expresiones seguro** (`js/core/expr.js`): escribe `=15773+6955` dentro de cualquier celda; conserva los componentes como rastro. Sin `eval`.
 - **Motor de cédulas** (`js/core/ledger.js`): totales que suben de nivel, ajustes solo por partida (no se teclean), cuadre de la centralizadora, cuatro ojos, cifras sin origen, referencias circulares.
 - **Panel de Cédulas**: navegación por jerarquía, celdas con expresiones, selección y suma de celdas, marcas de auditoría con botón de copiar, copiar tabla, ajustes.
-- **Diseño**: pastel estilo Apple, claro/oscuro, animaciones que respetan "reducir movimiento".
+- **Diseño**: identidad Monterroso (carbón + oro champaña, pasteles apagados para estados), claro/oscuro, títulos en serif, animaciones que respetan "reducir movimiento" y contraste AA verificado por prueba.
 
 ## Seguridad (resumen)
 
