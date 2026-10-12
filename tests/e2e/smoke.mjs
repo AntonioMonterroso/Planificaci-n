@@ -177,6 +177,20 @@ await page.goto(`${base}/${PAGE}#/legal/nomina`);
 await page.waitForSelector('.banner.warn');
 check((await page.locator('text=Norma por citar').count()) >= 1, 'Legal: un área sin fuente dice "Norma por citar"');
 
+// ---- Informe y cartas ----
+await page.goto(`${base}/${PAGE}#/informe/carta_gerencia`);
+await page.waitForSelector('textarea');
+check((await page.locator('.banner.warn').count()) === 1, 'Informe: se muestran los pendientes antes de firmar');
+await page.locator('textarea').nth(1).fill('Hallazgo de prueba < con símbolos & texto.');
+await page.locator('textarea').nth(1).press('Tab');
+await page.waitForTimeout(200);
+await page.locator('button', { hasText: 'Firmar' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('.chip', { hasText: 'Firmado' }).count()) === 0, 'Informe: no se firma con verificaciones pendientes');
+const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('button', { hasText: 'Descargar para Word' }).click()]);
+const html = await (await import('node:fs/promises')).readFile(await dl.path(), 'utf-8');
+check(html.includes('BORRADOR') && html.includes('&lt; con símbolos &amp;') && !html.includes('<script'), 'Informe: la exportación sale marcada como borrador y escapada');
+
 // ---- Bandeja de Claude ----
 await page.goto(`${base}/${PAGE}#/claude`);
 await page.waitForSelector('.bandeja-item');

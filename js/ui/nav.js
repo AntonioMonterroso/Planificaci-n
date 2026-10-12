@@ -17,7 +17,7 @@ export const NAV = [
     { id: 'ajustes', icon: 'plusminus', label: 'Ajustes', desc: 'Libro de partidas con control de cuadre y aprobación.' },
     { id: 'hallazgos', icon: 'edit', label: 'Hallazgos y cartas', desc: 'Hallazgos, recomendaciones, divulgaciones y carta de gerencia, editables.' },
     { id: 'cierre', icon: 'check', label: 'Cierre', desc: 'Hechos posteriores, empresa en funcionamiento, representación y lista de verificación.' },
-    { id: 'informe', icon: 'file', label: 'Informe y opinión', desc: 'Informe y opinión (NIA 700/705/706) con plantillas editables y exportación.' },
+    { id: 'informe', icon: 'file', label: 'Informe y opinión', ready: true, desc: 'Informe y opinión (NIA 700/705/706) con plantillas editables y exportación.' },
   ] },
   { group: 'Cumplimiento', items: [
     { id: 'legal', icon: 'scale', label: 'Cumplimiento legal', ready: true, desc: 'SAT, IGSS, Código de Comercio, lavado de activos y más: por separado y en conjunto.' },
