@@ -1,0 +1,90 @@
+/* Tokens de diseño. Claro por defecto; oscuro automático o manual (data-theme). */
+:root {
+  color-scheme: light;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --bg: #f5f5f9;
+  --bg-grad-a: #efeaff;
+  --bg-grad-b: #e6f6ff;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-solid: #ffffff;
+  --surface-2: #f0f0f6;
+  --border: rgba(60, 60, 90, 0.12);
+  --text: #1d1d24;
+  --text-2: #5b5b6b;
+  --text-3: #8a8a99;
+  --shadow: 0 1px 2px rgba(40, 40, 80, 0.06), 0 8px 24px rgba(40, 40, 80, 0.07);
+  --shadow-hover: 0 2px 6px rgba(40, 40, 80, 0.08), 0 16px 36px rgba(40, 40, 80, 0.12);
+
+  /* acentos pastel (fondo) + tinta legible (texto) */
+  --lav: #e4dcff;  --lav-ink: #5b43c9;
+  --mint: #d3f4e4; --mint-ink: #17744c;
+  --peach: #ffe3d2; --peach-ink: #a8481c;
+  --sky: #d4eaff;  --sky-ink: #1f63a8;
+  --rose: #ffdbe8; --rose-ink: #b02a5e;
+  --sun: #fff1c2;  --sun-ink: #8a6200;
+
+  --accent: #7c6af2;
+  --accent-ink: #ffffff;
+  --ok: var(--mint-ink);
+  --warn: var(--sun-ink);
+  --bad: var(--rose-ink);
+
+  --radius: 18px;
+  --radius-sm: 12px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-w: 268px;
+  --gutter: 16px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e0e14;
+  --bg-grad-a: #1a1530;
+  --bg-grad-b: #0d1a26;
+  --surface: rgba(30, 30, 42, 0.74);
+  --surface-solid: #1b1b26;
+  --surface-2: #242434;
+  --border: rgba(200, 200, 255, 0.12);
+  --text: #f1f1f7;
+  --text-2: #b4b4c6;
+  --text-3: #868699;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 36px rgba(0, 0, 0, 0.5);
+
+  --lav: #2c2552;  --lav-ink: #cbbfff;
+  --mint: #12362a; --mint-ink: #8ee3b9;
+  --peach: #3d2417; --peach-ink: #ffb78f;
+  --sky: #14304d;  --sky-ink: #9bd0ff;
+  --rose: #432032; --rose-ink: #ff9cc0;
+  --sun: #3d3212;  --sun-ink: #ffd96b;
+  --accent: #9a8bff;
+  --accent-ink: #14102c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e0e14;
+    --bg-grad-a: #1a1530;
+    --bg-grad-b: #0d1a26;
+    --surface: rgba(30, 30, 42, 0.74);
+    --surface-solid: #1b1b26;
+    --surface-2: #242434;
+    --border: rgba(200, 200, 255, 0.12);
+    --text: #f1f1f7;
+    --text-2: #b4b4c6;
+    --text-3: #868699;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 36px rgba(0, 0, 0, 0.5);
+    --lav: #2c2552;  --lav-ink: #cbbfff;
+    --mint: #12362a; --mint-ink: #8ee3b9;
+    --peach: #3d2417; --peach-ink: #ffb78f;
+    --sky: #14304d;  --sky-ink: #9bd0ff;
+    --rose: #432032; --rose-ink: #ff9cc0;
+    --sun: #3d3212;  --sun-ink: #ffd96b;
+    --accent: #9a8bff;
+    --accent-ink: #14102c;
+  }
+}

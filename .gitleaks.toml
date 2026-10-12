@@ -1,0 +1,17 @@
+# Escaneo de secretos (gitleaks). Ejecutar antes de cada commit: gitleaks detect --source .
+title = "AuditOS"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-service-role"
+description = "Clave service_role de Supabase (JWT con role=service_role)"
+regex = '''eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]*c2VydmljZV9yb2xl[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{10,}'''
+tags = ["supabase", "secret"]
+
+[[rules]]
+id = "supabase-access-token"
+description = "Token personal de acceso de Supabase"
+regex = '''sbp_[a-f0-9]{40}'''
+tags = ["supabase", "secret"]
