@@ -73,3 +73,62 @@ export function withPackage(ledger, code) {
   const all = [...ledger.papers.values()].map((p) => (p.ref === bg.ref ? nextBg : p));
   return new Ledger({ header: ledger.header, papers: [...all, ...papers], adjustments });
 }
+
+// ---------- estructura a mano: agregar analíticas, subanalíticas y líneas; borrar cédulas vacías ----------
+
+const NEXT = { sumaria: 'analitica', analitica: 'subanalitica' };
+const KIND_NAME = { analitica: 'Analítica', subanalitica: 'Subanalítica' };
+
+function rebuild(ledger, papers, adjustments = ledger.adjustments) {
+  return new Ledger({ header: ledger.header, papers, adjustments });
+}
+const nextIndex = (nums) => (nums.length ? Math.max(...nums) : 0) + 1;
+
+/** Crea la cédula hija (sumaria → analítica → subanalítica) enlazada desde una línea nueva del padre. */
+export function addChild(ledger, parentRef, label) {
+  const parent = ledger.paper(parentRef);
+  if (!parent) throw new Error(`No existe la cédula ${parentRef}`);
+  const kind = NEXT[parent.kind];
+  if (!kind) throw new Error(parent.kind === 'centralizadora' ? 'Las sumarias de la centralizadora se generan por rubro' : 'Una subanalítica no tiene nivel inferior: agrega líneas');
+  const name = String(label ?? '').trim();
+  if (!name) throw new Error('Escribe el nombre');
+  const sep = kind === 'analitica' ? '' : '-';
+  const idx = nextIndex(ledger.children(parentRef).map((c) => Number(c.ref.slice(parentRef.length + sep.length))).filter(Number.isFinite));
+  const ref = `${parentRef}${sep}${idx}`;
+  if (ledger.paper(ref)) throw new Error(`Ya existe la cédula ${ref}`);
+  const key = `${kind === 'analitica' ? 'r' : 's'}${idx}`;
+  const child = { ref, kind, parent: parentRef, title: `${KIND_NAME[kind]} de ${name}`, nature: parent.nature, signoffs: {}, lines: [{ key: 'saldo', code: '1', label: 'Saldo según contabilidad', contab: 0 }] };
+  const papers = [...ledger.papers.values()].map((p) => (p.ref === parentRef
+    ? { ...p, lines: [...p.lines.filter((l) => l.key !== key), { key, code: String(p.lines.length + 1), label: name, link: ref }] }
+    : p));
+  return { ledger: rebuild(ledger, [...papers, child]), ref };
+}
+
+/** Agrega una línea de detalle (con saldo propio) a una analítica o subanalítica. */
+export function addLine(ledger, ref, label) {
+  const paper = ledger.paper(ref);
+  if (!paper) throw new Error(`No existe la cédula ${ref}`);
+  if (!['analitica', 'subanalitica'].includes(paper.kind)) throw new Error('Solo se agregan líneas a analíticas y subanalíticas');
+  const name = String(label ?? '').trim();
+  if (!name) throw new Error('Escribe el nombre');
+  const idx = nextIndex(paper.lines.map((l) => Number(/^l(\d+)$/.exec(l.key)?.[1])).filter(Number.isFinite));
+  const key = `l${idx}`;
+  const papers = [...ledger.papers.values()].map((p) => (p.ref === ref
+    ? { ...p, lines: [...p.lines, { key, code: String(p.lines.length + 1), label: name, contab: 0 }] } : p));
+  return { ledger: rebuild(ledger, papers), key };
+}
+
+/** Borra una cédula solo si está vacía: sin hijas, sin cifras, sin ajustes y sin firmas. Quita su línea en el padre. */
+export function removeChild(ledger, ref) {
+  const paper = ledger.paper(ref);
+  if (!paper) throw new Error(`No existe la cédula ${ref}`);
+  if (!paper.parent || !NEXT[ledger.paper(paper.parent)?.kind]) throw new Error('Esta cédula no se puede borrar desde aquí');
+  if (ledger.children(ref).length) throw new Error('Tiene cédulas hijas: bórralas primero');
+  const res = ledger.get(ref);
+  if (res.lines.some((l) => l.contab !== 0 || l.debe !== 0 || l.haber !== 0)) throw new Error('Tiene cifras: déjala en cero para borrarla');
+  if (ledger.adjustments.some((a) => a.entries.some((e) => e.ref === ref))) throw new Error('Tiene ajustes que la usan');
+  if (Object.values(paper.signoffs ?? {}).some(Boolean)) throw new Error('Tiene firmas de elaboración o revisión');
+  const papers = [...ledger.papers.values()].filter((p) => p.ref !== ref)
+    .map((p) => (p.ref === paper.parent ? { ...p, lines: p.lines.filter((l) => l.link !== ref) } : p));
+  return { ledger: rebuild(ledger, papers), parent: paper.parent };
+}

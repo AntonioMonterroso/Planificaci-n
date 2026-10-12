@@ -23,7 +23,7 @@ import { legalView } from './ui/legal.js';
 import { informeView } from './ui/informe.js';
 import { savePapers, loadPapers } from './core/papers-remote.js';
 import { demoInputs } from './demo/havad.js';
-import { withPackage, RUBROS } from './core/paquetes.js';
+import { withPackage, RUBROS, addChild, addLine, removeChild } from './core/paquetes.js';
 import { copyText, toast } from './ui/copy.js';
 import { formatMoney, plainNumber, round2 } from './core/money.js';
 
@@ -70,6 +70,17 @@ const ctx = {
     if (w) { ctx.formatos = w.formatos ?? {}; ctx.legal = w.legal ?? undefined; ctx.legalPerfil = w.legalPerfil ?? undefined; ctx.docs = w.docs ?? {}; ctx.eng.obligations = w.obligations ?? []; ctx.havad = w.havad ?? ctx.havad; }
   },
   havad: demoInputs(),
+  addChild(ref, label) {
+    try { const r = addChild(ctx.ledger, ref, label); ctx.ledger = r.ledger; ctx.selection.clear(); toast(`Creada la cédula ${r.ref}`); location.hash = `#/cedulas/${encodeURIComponent(r.ref)}`; render(); }
+    catch (e) { toast(e.message); }
+  },
+  addLine(ref, label) {
+    try { ctx.ledger = addLine(ctx.ledger, ref, label).ledger; toast('Línea agregada'); render(); } catch (e) { toast(e.message); }
+  },
+  removeChild(ref) {
+    try { const r = removeChild(ctx.ledger, ref); ctx.ledger = r.ledger; ctx.selection.clear(); toast(`Cédula ${ref} eliminada`); location.hash = `#/cedulas/${encodeURIComponent(r.parent)}`; render(); }
+    catch (e) { toast(e.message); }
+  },
   generatePackage(code) {
     try { ctx.ledger = withPackage(ctx.ledger, code); ctx.selection.clear(); toast(`Paquete de ${RUBROS[code].title} generado`); render(); }
     catch (e) { toast(e.message); }

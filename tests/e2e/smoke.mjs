@@ -191,6 +191,25 @@ const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('but
 const html = await (await import('node:fs/promises')).readFile(await dl.path(), 'utf-8');
 check(html.includes('BORRADOR') && html.includes('&lt; con símbolos &amp;') && !html.includes('<script'), 'Informe: la exportación sale marcada como borrador y escapada');
 
+// ---- Estructura a mano ----
+await page.goto(`${base}/${PAGE}#/cedulas/A`);
+await page.waitForSelector('#est-name');
+await page.fill('#est-name', 'Inversiones temporales');
+await page.locator('button', { hasText: 'Agregar analítica' }).click();
+await page.waitForSelector('table.ledger');
+check(page.url().includes('cedulas/A3') && (await page.locator('h1', { hasText: 'Inversiones temporales' }).count()) === 1, 'Estructura: la analítica nueva se crea y se abre');
+await page.fill('#est-name', 'Fondo de prueba');
+await page.locator('button', { hasText: 'Agregar subanalítica' }).click();
+await page.waitForSelector('table.ledger');
+check(page.url().includes('cedulas/A3-1'), 'Estructura: la subanalítica se crea bajo la analítica');
+await page.fill('#est-name', 'Línea extra');
+await page.locator('button', { hasText: 'Agregar línea' }).click();
+await page.waitForTimeout(300);
+check((await page.locator('table.ledger tbody tr').count()) === 2, 'Estructura: se agrega una línea con saldo propio');
+await page.locator('button', { hasText: 'Eliminar esta cédula' }).click();
+await page.waitForTimeout(300);
+check(page.url().endsWith('cedulas/A3') && (await page.locator('a.link-btn', { hasText: 'A3-1' }).count()) === 0, 'Estructura: una cédula vacía se borra y el sistema vuelve a su padre');
+
 // ---- Bandeja de Claude ----
 await page.goto(`${base}/${PAGE}#/claude`);
 await page.waitForSelector('.bandeja-item');

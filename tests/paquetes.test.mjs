@@ -55,3 +55,54 @@ test('se pueden generar todos los rubros en secuencia', () => {
   assert.deepEqual(pendingRubros(L), []);
   assert.deepEqual(errors(L), []);
 });
+
+import { addChild, addLine, removeChild } from '../js/core/paquetes.js';
+
+test('agregar analítica a una sumaria la enlaza y numera sin chocar', () => {
+  let L = withPackage(base(), 'B');             // B tiene B1..B3
+  const r = addChild(L, 'B', 'Documentos por cobrar');
+  assert.equal(r.ref, 'B4');
+  L = r.ledger;
+  assert.equal(L.paper('B4').parent, 'B'); assert.equal(L.paper('B4').kind, 'analitica');
+  assert.ok(L.paper('B').lines.some((l) => l.link === 'B4' && l.label === 'Documentos por cobrar'));
+  assert.deepEqual(errors(L), errors(base()));
+  assert.equal(L.get('BG').sections.activo.contab, base().get('BG').sections.activo.contab, 'sin cifras nuevas no cambia nada');
+});
+
+test('agregar subanalítica a una analítica y líneas de detalle con saldo propio', () => {
+  let L = withPackage(base(), 'B');
+  L = addChild(L, 'B1', 'Cliente Uno').ledger;
+  assert.equal(L.paper('B1-1').kind, 'subanalitica');
+  L = addLine(L, 'B1-1', 'Factura 001').ledger;
+  assert.equal(L.paper('B1-1').lines.length, 2);
+  L.papers.get('B1-1').lines.find((l) => l.key === 'l1').contab = '=100+50';
+  L.compute();
+  assert.equal(L.get('B1-1').totals.contab, 150);
+  assert.equal(L.get('BG').sections.activo.contab, base().get('BG').sections.activo.contab + 150);
+});
+
+test('reglas de estructura: sin hijas bajo subanalítica ni sobre la centralizadora, y nombre obligatorio', () => {
+  const L = withPackage(base(), 'B');
+  assert.throws(() => addChild(L, 'BG', 'X'), /por rubro/);
+  assert.throws(() => addChild(L, 'A1-1', 'X'), /subanalítica/);
+  assert.throws(() => addChild(L, 'B', '  '), /nombre/);
+  assert.throws(() => addLine(L, 'B', 'X'), /analíticas y subanalíticas/);
+  assert.throws(() => addChild(L, 'ZZ', 'X'), /No existe/);
+});
+
+test('solo se borra una cédula vacía; con cifras, ajustes, hijas o firmas se rechaza', () => {
+  let L = withPackage(base(), 'B');
+  const nuevo = addChild(L, 'B', 'Temporal'); L = nuevo.ledger;
+  const ref = nuevo.ref;
+  const sinHijas = removeChild(L, ref).ledger;
+  assert.equal(sinHijas.paper(ref), null);
+  assert.ok(!sinHijas.paper('B').lines.some((l) => l.link === ref));
+  assert.throws(() => removeChild(L, 'B1'), /cifras/);           // B1 trae el saldo trasladado
+  L.papers.get(ref).signoffs = { elaboro: 'u1' };
+  assert.throws(() => removeChild(L, ref), /firmas/);
+  L.papers.get(ref).signoffs = {};
+  L = addChild(L, ref, 'Hija').ledger;
+  assert.throws(() => removeChild(L, ref), /hijas/);
+  assert.throws(() => removeChild(L, 'BG'), /no se puede borrar/);
+  assert.throws(() => removeChild(L, 'A1-1'), /cifras/);
+});

@@ -25,6 +25,7 @@ node tests/e2e/smoke.mjs   # prueba en navegador (requiere Playwright)
 
 - **Generador de paquetes por rubro** (`js/core/paquetes.js`): desde la centralizadora, un clic crea sumaria › analíticas › subanalíticas enlazadas del rubro (cuentas por cobrar, inventarios, PPE, cuentas por pagar, patrimonio). El saldo que ya tenía la línea se traslada con su documento de origen y los ajustes se reubican; la centralizadora sigue cuadrando. Es estructura, sin cifras ni criterios legales.
 
+- **Estructura a mano**: en cada sumaria, analítica y subanalítica puedes agregar la cédula del nivel de abajo (queda enlazada), agregar líneas de detalle con saldo propio y borrar una cédula **vacía** (sin cifras, ajustes, hijas ni firmas).
 - **Analíticos** (`js/core/havad.js`): 15 ratios estándar (liquidez, actividad, endeudamiento, rentabilidad) con fórmula visible y DuPont. Si falta un dato o el divisor es cero, el ratio queda sin valor y lo dice. Convenciones a confirmar contra el HAVAD de la firma: saldos finales y 365 días.
 
 - **Cifrado de contenido** (`js/core/crypto.js`, `js/core/papers-remote.js`): al guardar en Supabase, cada cédula se cifra en el navegador (AES-GCM, llave derivada con PBKDF2 de una frase de al menos 12 caracteres). La base solo guarda referencia, versión, estado y texto cifrado; el guardado queda en la bitácora. La frase no se guarda en ningún lado: **si se pierde, el contenido es irrecuperable** (el plan prevé un procedimiento de recuperación con dos personas, aún no implementado).

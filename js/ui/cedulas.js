@@ -6,6 +6,7 @@ import { formatMoney, plainNumber, round2, parseMoney } from '../core/money.js';
 import { copyButton, copyText, tableToTSV, toast } from './copy.js';
 import { pageHead, card, banner, chip, fold, btn } from './kit.js';
 import { RUBROS, pendingRubros } from '../core/paquetes.js';
+const CHILD_LABEL = { sumaria: 'Agregar analítica', analitica: 'Agregar subanalítica' };
 
 export const MARKS = [
   ['≤', 'Sumado horizontal (verificado por el motor)'],
@@ -95,6 +96,17 @@ export function cedulasView(ctx, wanted) {
         btn('Guardar', { iconName: 'upload', cls: 'sm', onClick: run((p) => ctx.savePapers(p), (n) => `${n} papeles guardados cifrados`) }),
         btn('Cargar', { iconName: 'down', cls: 'sm', onClick: run((p) => ctx.loadPapers(p), () => 'Papeles cargados y descifrados') })));
   })() : null;
+  const estructura = ['sumaria', 'analitica', 'subanalitica'].includes(paper.kind) ? (() => {
+    const name = h('input', { id: 'est-name', type: 'text', placeholder: 'Nombre (ej. Banco Tres, cuenta monetaria)', 'aria-label': 'Nombre de la nueva cédula o línea' });
+    const canRemove = paper.parent && ['sumaria', 'analitica'].includes(L.paper(paper.parent)?.kind);
+    return card({ title: 'Estructura de esta cédula' },
+      h('p', { class: 'tiny' }, paper.kind === 'subanalitica' ? 'Una subanalítica es el último nivel: agrega líneas de detalle.' : 'Crea el nivel de abajo (queda enlazado a esta cédula) o agrega una línea de detalle con saldo propio.'),
+      h('div', { class: 'field' }, h('label', { for: 'est-name' }, 'Nombre'), name),
+      h('div', { class: 'row' },
+        CHILD_LABEL[paper.kind] ? btn(CHILD_LABEL[paper.kind], { iconName: 'plus', cls: 'sm', onClick: () => ctx.addChild(ref, name.value) }) : null,
+        paper.kind !== 'sumaria' ? btn('Agregar línea', { iconName: 'plus', cls: 'sm', onClick: () => ctx.addLine(ref, name.value) }) : null,
+        canRemove ? btn('Eliminar esta cédula (vacía)', { cls: 'sm ghost', onClick: () => ctx.removeChild(ref) }) : null));
+  })() : null;
   const pending = paper.kind === 'centralizadora' ? pendingRubros(L) : [];
   const generator = pending.length ? card({ title: 'Generar paquetes por rubro' },
     h('p', { class: 'tiny' }, 'Crea la sumaria, las analíticas y las subanalíticas del rubro, enlazadas a la centralizadora. El saldo que ya tiene la línea pasa a la primera cédula hoja con su documento de origen, y la centralizadora sigue cuadrando.'),
@@ -106,6 +118,7 @@ export function cedulasView(ctx, wanted) {
     banners,
     table,
     generator,
+    estructura,
     sync,
     fold('Ajustes y reclasificaciones', adjustmentsBody(ctx, ref), { badge: adjCount(L, ref) }),
     fold('Marcas de auditoría', marksBody()),
