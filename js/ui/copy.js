@@ -1,5 +1,6 @@
 // Botón de copiar universal + avisos (toasts).
 import { h } from './dom.js';
+import { icon } from './icons.js';
 
 export function toast(msg) {
   const box = document.getElementById('toasts');
@@ -24,12 +25,12 @@ export async function copyText(text, label = 'Copiado') {
   toast(`${label}: ${text.length > 40 ? text.slice(0, 40) + '…' : text}`);
 }
 
-/** Botón pequeño "copiar". `getText` puede ser texto o función. */
-export function copyButton(getText, { label = 'Copiado', title = 'Copiar', text = '⧉', cls = 'btn sm ghost' } = {}) {
+/** Botón de copiar con icono. `text` = rótulo opcional junto al icono. */
+export function copyButton(getText, { label = 'Copiado', title = 'Copiar', text = '', cls = 'btn sm ghost' } = {}) {
   return h('button', {
     type: 'button', class: cls, title, 'aria-label': title,
     onClick: (e) => { e.stopPropagation(); copyText(typeof getText === 'function' ? getText() : getText, label); },
-  }, text);
+  }, icon('copy', 16), text);
 }
 
 /** Tabla -> texto tabulado (pega bien en Excel y Word). */

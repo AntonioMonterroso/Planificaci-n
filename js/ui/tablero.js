@@ -1,65 +1,83 @@
-// Tablero general y hoja de ruta de paneles pendientes.
+// Tablero: bienvenida con el logo, indicadores del encargo, siguientes pasos y mapa de paneles.
 import { h } from './dom.js';
+import { icon } from './icons.js';
 import { formatMoney } from '../core/money.js';
+import { analyzeContract, phaseGate, resolveOccupations, occupationSummary, pbcSummary, PHASES } from '../core/engagement.js';
 import { NAV, FLAT } from './nav.js';
+import { pageHead, card, chip, btn, sectionTitle } from './kit.js';
+import { gateState, currentPhase } from './perfil.js';
 
 function countUp(el, to, fmt) {
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce || !Number.isFinite(to)) { el.textContent = fmt(to); return; }
-  const t0 = performance.now(); const dur = 900;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !Number.isFinite(to)) { el.textContent = fmt(to); return; }
+  const t0 = performance.now(); const dur = 800;
   const tick = (t) => {
-    const p = Math.min(1, (t - t0) / dur);
-    const e = 1 - (1 - p) ** 3;
+    const p = Math.min(1, (t - t0) / dur); const e = 1 - (1 - p) ** 3;
     el.textContent = fmt(to * e);
     if (p < 1) requestAnimationFrame(tick); else el.textContent = fmt(to);
   };
   requestAnimationFrame(tick);
 }
 
-function stat(color, icon, label, value, fmt) {
+function stat(tone, ic, label, value, fmt, hint = null) {
   const num = h('div', { class: 'num' }, fmt(0));
-  const card = h('div', { class: 'card hover stat' },
-    h('div', { class: `dot chip ${color}`, 'aria-hidden': 'true' }, icon), num, h('div', { class: 'lbl' }, label));
   queueMicrotask(() => countUp(num, value, fmt));
-  return card;
+  return h('div', { class: 'card stat hover' },
+    h('div', { class: 'top' }, h('div', { class: `dot chip ${tone}`, 'aria-hidden': 'true' }, icon(ic, 20)), hint ? h('span', { class: 'tiny' }, hint) : null),
+    num, h('div', { class: 'lbl' }, label));
 }
 
 export function tableroView(ctx) {
-  const L = ctx.ledger;
+  const L = ctx.ledger; const eng = ctx.eng; const today = ctx.today;
   const bg = L.get('BG');
   const errs = L.issues.filter((i) => i.severity === 'error').length;
-  const warns = L.issues.filter((i) => i.severity === 'warn').length;
+  const a = analyzeContract(eng.contract, today);
+  const pbc = pbcSummary(eng.docs, today);
+  const occ = occupationSummary(resolveOccupations(eng.staff, today, { highRisk: eng.highRisk, overrides: eng.overrides }));
+  const cur = currentPhase(eng, today);
+  const gate = phaseGate(cur, gateState(eng, today));
   const int = (n) => String(Math.round(n));
-  const q = (n) => formatMoney(n, { zero: 'Q0.00' });
-  const ready = FLAT.filter((i) => i.ready).length;
+
+  const steps = gate.ok
+    ? [h('div', { class: 'step done' }, h('span', { class: 'n' }, icon('check', 16)), h('span', {}, `La fase ${cur} está lista para cerrarse.`))]
+    : gate.blockers.slice(0, 5).map((b, i) => h('div', { class: 'step' }, h('span', { class: 'n' }, String(i + 1)), h('span', {}, b.message)));
+
+  const groups = NAV.filter((g) => g.group !== 'General').map((g) => h('div', { class: 'map-group' },
+    sectionTitle(g.group),
+    h('div', { class: 'map' }, g.items.map((i) => h('a', { href: `#/${i.id}`, class: i.ready ? '' : 'off' },
+      h('span', { class: 'mi' }, icon(i.icon, 18)),
+      h('span', {}, h('span', { class: 't', style: undefined }, i.label), h('div', { class: 's' }, i.ready ? 'Disponible' : 'Próximamente')))))));
 
   return h('div', { class: 'view' },
-    h('div', { class: 'card' },
-      h('h2', {}, 'Bienvenido a AuditOS'),
-      h('p', { class: 'muted' }, 'Plataforma de auditoría externa: perfil del encargo, cédulas con cuadre automático, analíticos, hallazgos, cumplimiento legal y colaboración con Claude, todo en un solo lugar.'),
-      h('div', { class: 'row' },
-        h('a', { class: 'btn primary', href: '#/cedulas/BG' }, '▦ Abrir cédulas de demostración'),
-        h('span', { class: 'chip sun' }, 'Datos sintéticos: aún sin conexión a la base de datos'))),
+    h('section', { class: 'card hero' },
+      h('div', {},
+        h('div', { class: 'eyebrow' }, 'Firma de auditoría'),
+        h('h2', {}, 'Todo el encargo, ordenado en un solo lugar'),
+        h('p', {}, 'Perfil y plazos del encargo, documentos del cliente, cédulas que cuadran solas, equipo sin puestos vacíos y cumplimiento legal.'),
+        h('div', { class: 'row', style: undefined }, btn('Perfil del encargo', { cls: 'primary', iconName: 'clipboard', href: '#/perfil' }), btn('Abrir cédulas', { iconName: 'grid', href: '#/cedulas/BG' }), chip('sun', 'Datos de demostración'))),
+      h('div', { class: 'logo-plate' }, h('img', { src: 'assets/logo.webp', alt: 'Monterroso · Firma de Auditoría, Auditores y Consultores', width: '900', height: '358' }))),
     h('div', { class: 'grid cols-4' },
-      stat('lav', '▦', 'Cédulas en el encargo', L.papers.size, int),
-      stat('mint', '◔', 'Activo según auditoría', bg.sections?.activo?.audit ?? 0, q),
-      stat(errs ? 'rose' : 'mint', errs ? '✕' : '✓', 'Errores de cuadre', errs, int),
-      stat(warns ? 'sun' : 'mint', '!', 'Alertas por revisar', warns, int)),
-    h('div', { class: 'card' },
-      h('h2', {}, 'Mapa de paneles'),
-      h('p', { class: 'tiny' }, `${ready} de ${FLAT.length} paneles disponibles en esta versión. Los demás muestran su alcance.`),
-      h('div', { class: 'roadmap' }, NAV.flatMap((g) => g.items).map((i) => h('a', {
-        class: 'card hover', href: `#/${i.id}`, style: undefined,
-      }, h('div', { class: 'row' }, h('span', { class: `chip ${i.ready ? 'mint' : 'lav'}`, 'aria-hidden': 'true' }, i.icon), h('b', {}, i.label)),
-      h('div', { class: 'tiny' }, i.ready ? 'Disponible' : 'Próximamente'))))));
+      stat(a.daysToReport < 0 ? 'rose' : a.daysToReport < 15 ? 'sun' : 'mint', 'calendar', 'Días para el informe', a.daysToReport ?? 0, int),
+      stat('lav', 'upload', 'Documentos aceptados', pbc.accepted, (n) => `${Math.round(n)} de ${pbc.total}`),
+      stat(occ.vacante ? 'rose' : 'mint', 'idcard', 'Funciones sin responsable', occ.vacante, int),
+      stat(errs ? 'rose' : 'mint', 'grid', 'Errores de cuadre', errs, int, bg.sections?.activo ? `Activo ${formatMoney(bg.sections.activo.audit, { zero: 'Q0.00' })}` : null)),
+    h('div', { class: 'grid cols-2' },
+      card({ title: `Siguiente paso · fase ${cur}`, actions: chip(gate.ok ? 'mint' : 'sun', PHASES[cur]) }, h('div', { class: 'steps' }, steps)),
+      card({ title: 'Cumplimiento y plazos' },
+        h('div', { class: 'stack' },
+          h('div', { class: 'row' }, chip('gold', 'Informe', 'file'), h('span', { class: 'grow' }), h('b', {}, `${a.daysToReport} d`)),
+          h('div', { class: 'row' }, chip('gold', 'Armado del archivo', 'clock'), h('span', { class: 'grow' }), h('b', {}, `${a.daysToArchive} d`)),
+          h('div', { class: 'row' }, chip('gold', 'Vigencia del contrato', 'calendar'), h('span', { class: 'grow' }), h('b', {}, `${a.daysToExpiry} d`)),
+          h('p', { class: 'tiny' }, 'Plazos del contrato, del informe y del armado del archivo final (NIA 230).')))),
+    card({ title: 'Mapa de paneles', cls: 'mapcard' }, h('div', {}, groups),
+      h('p', { class: 'tiny' }, `${FLAT.filter((i) => i.ready).length} de ${FLAT.length} paneles disponibles; el resto muestra su alcance.`)));
 }
 
 export function soonView(item) {
   return h('div', { class: 'view' },
     h('div', { class: 'card empty' },
-      h('div', { class: 'big', 'aria-hidden': 'true' }, item.icon),
-      h('h2', {}, item.label),
-      h('p', { class: 'muted' }, item.desc),
-      h('span', { class: 'chip lav' }, 'Próximamente'),
-      h('p', {}, h('a', { class: 'btn', href: '#/cedulas/BG' }, '← Volver a las cédulas'))));
+      h('div', { class: 'big', 'aria-hidden': 'true' }, icon(item.icon, 30)),
+      h('h2', { class: 'page-title' }, item.label),
+      h('p', { class: 'muted', style: undefined }, item.desc),
+      chip('gold', 'Próximamente'),
+      btn('Volver al tablero', { iconName: 'home', href: '#/tablero' })));
 }

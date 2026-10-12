@@ -29,7 +29,8 @@ AuditOS es una plataforma de auditoría externa (NIA + NIIF PYMES, Guatemala). C
 
 ## Identidad visual (logo Monterroso)
 
-- Paleta: carbón + oro champaña de marca; pasteles apagados solo para estados (menta = ok, rosa = error, arena = alerta, cielo = info, lavanda = neutro, durazno = fórmulas). Oscuro es la referencia de diseño; claro es marfil cálido.
+- Paleta: carbón + oro champaña de marca; pasteles apagados solo para estados (menta = ok, rosa = error, arena = alerta, cielo = info, lavanda = neutro, durazno = fórmulas), generados en OKLCH con igual luminosidad y croma.
+- Orden: 24 px entre secciones (`.view`), tarjetas planas de un solo nivel, iconos de `js/ui/icons.js` (nunca glifos Unicode), piezas de `js/ui/kit.js`. Oscuro es la referencia de diseño; claro es marfil cálido.
 - Todo color sale de `css/tokens.css` (nunca hex sueltos en componentes). Si cambias un token, `npm test` verifica contraste WCAG AA en ambos temas.
 - Barra lateral siempre carbón; el logo va sobre una placa marfil (sus letras son negras). Títulos en serif, cuerpo en sans del sistema; sin fuentes externas (CSP).
 - Assets de marca en `assets/` (logo, monograma, favicon): son de la firma, no datos de clientes.

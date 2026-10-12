@@ -15,7 +15,8 @@ function block(startRe) {
 const vars = (txt) => Object.fromEntries([...txt.matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
 
 const light = vars(block(/^:root \{/m));
-const dark = { ...vars(block(/^:root\[data-theme="dark"\] \{/m)) };
+const darkRaw = vars(block(/^:root\[data-theme="dark"\] \{/m));
+const dark = { ...light, ...darkRaw }; // el tema oscuro hereda de :root lo que no redefine
 const darkMedia = vars(block(/^\s*:root:not\(\[data-theme="light"\]\) \{/m));
 
 function rgba(c) {
@@ -34,7 +35,7 @@ function pairs(T, name) {
   const bg = T.bg;
   const solid = (k) => over(T[k], bg);
   const list = [];
-  for (const fg of ['text', 'text-2', 'text-3', 'accent-text']) for (const on of ['bg', 'surface-solid', 'surface-2']) list.push([`${name}: ${fg} sobre ${on}`, rgba(T[fg]), on === 'bg' ? rgba(bg) : solid(on), 4.5]);
+  for (const fg of ['text', 'text-2', 'text-3', 'accent-text']) for (const on of ['bg', 'surface-solid', 'surface-2', 'surface-3']) list.push([`${name}: ${fg} sobre ${on}`, rgba(T[fg]), on === 'bg' ? rgba(bg) : solid(on), 4.5]);
   list.push([`${name}: texto sobre tarjeta de vidrio`, rgba(T.text), over(T.surface, bg), 4.5]);
   list.push([`${name}: texto-2 sobre tarjeta de vidrio`, rgba(T['text-2']), over(T.surface, bg), 4.5]);
   list.push([`${name}: tinta del oro sobre fondo suave`, rgba(T['accent-soft-ink']), over(T['accent-soft'], T['surface-solid']), 4.5]);
@@ -53,16 +54,17 @@ for (const [name, T] of [['claro', light], ['oscuro', dark]]) {
 }
 
 test('contraste AA · barra lateral (siempre carbón)', () => {
-  const sb = rgba(light['sidebar-bg']);
-  const items = [['texto', '#f2efe8', 4.5], ['texto-2', '#bdb8ac', 4.5], ['texto-3', '#9b968b', 4.5], ['oro', '#d4b072', 4.5]];
-  const fails = items.filter(([, c, min]) => ratio(rgba(c), sb) < min).map(([n]) => n);
+  const L = light;
+  const sb = rgba(L['sb-bg']); const sb2 = rgba(L['sb-bg-2']);
+  const fails = [];
+  for (const k of ['sb-text', 'sb-text-2', 'sb-text-3', 'sb-gold']) for (const [n, bg] of [['fondo', sb], ['fondo-2', sb2]]) if (ratio(rgba(L[k]), bg) < 4.5) fails.push(`${k} sobre ${n}`);
+  const cur = over(L['sb-active-bg'], L['sb-bg']);
+  if (ratio(rgba(L['sb-active-ink']), cur) < 4.5) fails.push('elemento activo del menú');
   assert.deepEqual(fails, []);
-  const cur = over('rgba(212, 176, 114, 0.20)', light['sidebar-bg']);
-  assert.ok(ratio(rgba('#f0d9a8'), cur) >= 4.5, 'elemento activo del menú');
 });
 
 test('el bloque oscuro automático es idéntico al manual', () => {
-  assert.deepEqual(darkMedia, Object.fromEntries(Object.entries(dark)));
+  assert.deepEqual(darkMedia, darkRaw);
 });
 
 test('los dos temas definen los mismos tokens de color', () => {

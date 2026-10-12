@@ -1,10 +1,16 @@
 // Arranque de la aplicación: tema, navegación, enrutador por hash y barra de selección.
 import { h, mount } from './ui/dom.js';
+import { icon } from './ui/icons.js';
 import { NAV, FLAT } from './ui/nav.js';
 import { Ledger } from './core/ledger.js';
 import { demoData } from './demo/data.js';
+import { demoEngagement } from './demo/engagement.js';
+import { todayISO } from './core/engagement.js';
 import { cedulasView } from './ui/cedulas.js';
 import { tableroView, soonView } from './ui/tablero.js';
+import { perfilView } from './ui/perfil.js';
+import { pbcView } from './ui/pbc.js';
+import { equipoView } from './ui/equipo.js';
 import { copyText } from './ui/copy.js';
 import { formatMoney, plainNumber, round2 } from './core/money.js';
 
@@ -14,35 +20,36 @@ const side = document.getElementById('sidebar');
 const scrim = document.getElementById('scrim');
 const status = document.getElementById('statusbar');
 const title = document.getElementById('page-title');
+const themeBtn = document.getElementById('theme-btn');
 
 // ---------- tema (claro / oscuro / auto) ----------
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } },
 };
+const prefersDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
+const isDark = () => (root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark' : prefersDark());
 function applyTheme(t) {
   if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t); else root.removeAttribute('data-theme');
-  const dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-  const btn = document.getElementById('theme-btn');
-  btn.textContent = dark ? '☀' : '☾';
-  btn.setAttribute('aria-label', dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
-  btn.title = btn.getAttribute('aria-label');
+  mount(themeBtn, icon(isDark() ? 'sun' : 'moon', 18));
+  const label = isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+  themeBtn.setAttribute('aria-label', label); themeBtn.title = label;
 }
 let theme = store.get('auditos-theme') ?? 'auto';
 applyTheme(theme);
-document.getElementById('theme-btn').addEventListener('click', () => {
-  const dark = root.getAttribute('data-theme') === 'dark' || (!root.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
-  theme = dark ? 'light' : 'dark';
-  store.set('auditos-theme', theme);
-  applyTheme(theme);
-});
+themeBtn.addEventListener('click', () => { theme = isDark() ? 'light' : 'dark'; store.set('auditos-theme', theme); applyTheme(theme); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (theme === 'auto') applyTheme('auto'); });
+mount(document.getElementById('menu-btn'), icon('menu', 20));
 
 // ---------- contexto ----------
+const today = todayISO();
 const ctx = {
+  today,
   ledger: new Ledger(demoData()),
+  eng: demoEngagement(today),
   selMode: false,
   selection: new Map(),
+  selDoc: null,
   flash: null,
   rerender(flash = null) { ctx.flash = flash; render(); ctx.flash = null; },
   updateSelection,
@@ -59,8 +66,8 @@ function updateSelection() {
     h('span', {}, 'Celdas: ', h('b', {}, String(vals.length))),
     h('span', {}, 'Suma: ', h('b', {}, formatMoney(sum, { zero: 'Q0.00' }))),
     h('span', {}, 'Promedio: ', h('b', {}, formatMoney(avg, { zero: 'Q0.00' }))),
-    h('button', { type: 'button', class: 'btn sm', onClick: () => copyText(plainNumber(sum), 'Suma copiada') }, '⧉ Copiar suma'),
-    h('button', { type: 'button', class: 'btn sm', onClick: () => copyText(vals.map((v) => plainNumber(v)).join('+').replace(/\+-/g, '-'), 'Fórmula copiada') }, '⧉ Copiar como suma'),
+    h('button', { type: 'button', class: 'btn sm', onClick: () => copyText(plainNumber(sum), 'Suma copiada') }, icon('copy', 15), 'Copiar suma'),
+    h('button', { type: 'button', class: 'btn sm', onClick: () => copyText(vals.map((v) => plainNumber(v)).join('+').replace(/\+-/g, '-'), 'Fórmula copiada') }, icon('copy', 15), 'Copiar como suma'),
     h('button', { type: 'button', class: 'btn sm ghost', onClick: () => { ctx.selection.clear(); updateSelection(); render(); } }, 'Limpiar'));
 }
 
@@ -70,26 +77,25 @@ function buildNav(current) {
   for (const g of NAV) {
     nav.append(h('div', { class: 'nav-group' }, g.group));
     for (const i of g.items) {
-      nav.append(h('a', { href: `#/${i.id}`, ...(i.id === current ? { 'aria-current': 'page' } : {}) },
-        h('span', { class: 'ico', 'aria-hidden': 'true' }, i.icon), i.label, i.ready ? null : h('span', { class: 'soon' }, 'pronto')));
+      nav.append(h('a', { href: `#/${i.id}`, class: i.ready ? '' : 'off', ...(i.id === current ? { 'aria-current': 'page' } : {}) }, icon(i.icon, 19), i.label));
     }
   }
   return nav;
 }
 function renderSide(current) {
   mount(side,
-    h('div', { class: 'brand' },
-      h('a', { class: 'brand-plate', href: '#/tablero', 'aria-label': 'Monterroso, Firma de Auditoría: ir al tablero' },
-        h('img', { src: 'assets/logo.webp', alt: 'Monterroso · Firma de Auditoría, Auditores y Consultores', width: '900', height: '358' })),
-      h('div', { class: 'brand-sub' }, 'AuditOS')),
+    h('a', { class: 'brand', href: '#/tablero', 'aria-label': 'Monterroso, Firma de Auditoría: ir al tablero' },
+      h('span', { class: 'brand-mono', 'aria-hidden': 'true' }),
+      h('span', { class: 'brand-text' }, h('span', { class: 'brand-name' }, 'Monterroso'), h('span', { class: 'brand-tag' }, 'Auditores & Consultores'))),
     buildNav(current),
-    h('div', { class: 'tiny' }, 'v0.1 · demostración'));
+    h('div', { class: 'sb-foot' }, 'AuditOS · v0.2 demostración'));
 }
-function closeMenu() { side.classList.remove('open'); scrim.classList.remove('show'); document.getElementById('menu-btn').setAttribute('aria-expanded', 'false'); }
-document.getElementById('menu-btn').addEventListener('click', () => {
+const menuBtn = document.getElementById('menu-btn');
+function closeMenu() { side.classList.remove('open'); scrim.classList.remove('show'); menuBtn.setAttribute('aria-expanded', 'false'); }
+menuBtn.addEventListener('click', () => {
   const open = side.classList.toggle('open');
   scrim.classList.toggle('show', open);
-  document.getElementById('menu-btn').setAttribute('aria-expanded', String(open));
+  menuBtn.setAttribute('aria-expanded', String(open));
 });
 scrim.addEventListener('click', closeMenu);
 addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
@@ -108,10 +114,13 @@ function render() {
   let el;
   if (item.id === 'tablero') el = tableroView(ctx);
   else if (item.id === 'cedulas') el = cedulasView(ctx, arg ?? 'BG');
+  else if (item.id === 'perfil') el = perfilView(ctx);
+  else if (item.id === 'pbc') el = pbcView(ctx);
+  else if (item.id === 'equipo') el = equipoView(ctx);
   else el = soonView(item);
   const y = scrollY;
   mount(view, el);
-  if (ctx.flash) scrollTo(0, y);
+  if (ctx.flash || ctx.keepScroll) scrollTo(0, y);
   updateSelection();
 }
 addEventListener('hashchange', () => { closeMenu(); ctx.selection.clear(); render(); scrollTo(0, 0); view.focus({ preventScroll: true }); });
