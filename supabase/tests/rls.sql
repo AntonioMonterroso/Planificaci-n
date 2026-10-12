@@ -43,12 +43,28 @@ select t.as_user(6); select t.expect('admin ve miembros', (select count(*) from 
 select t.as_user(4); update members set role='socio' where user_id=t.uid(4);
 select t.expect('auxiliar no cambió de rol (0 filas)', (select role from members where user_id=t.uid(4))='auxiliar');
 
--- cuatro ojos
+-- cuatro ojos: cada rol solo se registra a sí mismo; nadie fabrica las firmas de otros
 select t.as_user(2);
-select t.fails('no se firma sin revisor', $q$update papers set status='firmado', prepared_by=t.uid(7) where ref='A1' and org_id::text like 'a%'$q$);
-select t.fails('elaborador = revisor no firma', $q$update papers set status='firmado', prepared_by=t.uid(7), reviewed_by=t.uid(7), authorized_by=t.uid(1) where ref='A1' and org_id::text like 'a%'$q$);
-update papers set status='firmado', prepared_by=t.uid(7), reviewed_by=t.uid(2), authorized_by=t.uid(3) where ref='A1' and org_id::text like 'a%';
-select t.expect('tres personas distintas pueden firmar', (select status from papers)='firmado');
+select t.fails('no se firma sin revisor', $q$update papers set status='firmado' where ref='A1' and org_id::text like 'a%'$q$);
+select t.fails('no se pone a otra persona como elaborador', $q$update papers set prepared_by=t.uid(7) where ref='A1' and org_id::text like 'a%'$q$);
+select t.fails('no se firma con tres personas ajenas puestas a mano', $q$update papers set status='firmado', prepared_by=t.uid(7), reviewed_by=t.uid(2), authorized_by=t.uid(3) where ref='A1' and org_id::text like 'a%'$q$);
+select t.fails('el encargado no puede autorizar (rol)', $q$update papers set authorized_by=t.uid(2) where ref='A1' and org_id::text like 'a%'$q$);
+select t.fails('un papel no se mueve a otra firma', $q$update papers set org_id='b0000000-0000-0000-0000-000000000002' where ref='A1' and org_id::text like 'a%'$q$);
+select t.fails('un papel no cambia de referencia', $q$update papers set ref='ZZ' where ref='A1' and org_id::text like 'a%'$q$);
+select t.as_user(7);
+select t.fails('el de campo no puede revisar (rol)', $q$update papers set reviewed_by=t.uid(7) where ref='A1' and org_id::text like 'a%'$q$);
+update papers set prepared_by=t.uid(7) where ref='A1' and org_id::text like 'a%';
+select t.expect('el de campo se registra como elaborador', (select prepared_by from papers where ref='A1' and org_id::text like 'a%')=t.uid(7));
+select t.fails('el elaborador no se reemplaza', $q$update papers set prepared_by=t.uid(2) where ref='A1' and org_id::text like 'a%'$q$);
+select t.as_user(2);
+update papers set reviewed_by=t.uid(2) where ref='A1' and org_id::text like 'a%';
+select t.expect('el encargado se registra como revisor', (select reviewed_by from papers where ref='A1' and org_id::text like 'a%')=t.uid(2));
+select t.fails('el encargado no firma el papel (no es autorizador)', $q$update papers set status='firmado' where ref='A1' and org_id::text like 'a%'$q$);
+select t.as_user(1);
+select t.fails('el socio no firma a nombre de otro autorizador', $q$update papers set authorized_by=t.uid(3), status='firmado' where ref='A1' and org_id::text like 'a%'$q$);
+update papers set authorized_by=t.uid(1), status='firmado' where ref='A1' and org_id::text like 'a%';
+select t.expect('tres personas reales, cada una por sí misma, firman', (select status from papers where ref='A1' and org_id::text like 'a%')='firmado');
+select t.as_user(2);
 
 -- firmado = inmutable
 select t.fails('papel firmado no se edita', $q$update papers set ciphertext='otro' where ref='A1'$q$);
@@ -100,8 +116,17 @@ select t.expect('asistente no puede aceptar su entrega (0 filas)', (select statu
 select t.fails('asistente no puede marcar aceptada la solicitud', $q$update claude_requests set status='aceptado'$q$);
 update claude_deliveries set body='otro'; delete from claude_deliveries;
 select t.expect('la entrega no se edita ni se borra', (select body from claude_deliveries)='Cuadra');
+select t.as_user(7);
+select t.fails('el de campo no decide sobre la entrega de Claude', $q$update claude_deliveries set status='aceptado'$q$);
+select t.fails('el de campo no acepta la solicitud', $q$update claude_requests set status='aceptado'$q$);
 select t.as_user(2);
 select t.expect('encargado ve la entrega', (select count(*) from claude_deliveries)=1);
 update claude_deliveries set status='aceptado'; update claude_requests set status='aceptado';
 select t.expect('el auditor acepta y queda su nombre', (select decided_by from claude_deliveries)=t.uid(2));
 select t.fails('una entrega decidida no se vuelve a decidir', $q$update claude_deliveries set status='rechazado'$q$);
+
+-- ---------- administrador sin autoprivilegios ----------
+select t.as_user(6);
+update members set role='socio' where user_id=t.uid(6);
+select t.expect('el administrador no cambia su propio rol (0 filas)', (select role from members where user_id=t.uid(6))='admin');
+select t.fails('el administrador no se agrega a sí mismo con otro rol', $q$insert into members values ('b0000000-0000-0000-0000-000000000002', t.uid(6), 'socio')$q$);

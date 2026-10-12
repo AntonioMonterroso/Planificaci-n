@@ -46,4 +46,6 @@ Sin configuración la app corre en modo demostración. Para conectarla: copia `j
 
 ## Seguridad (resumen)
 
+Estado detallado, hallazgos corregidos y riesgos abiertos en [`docs/amenazas.md`](docs/amenazas.md). Aplica las migraciones `supabase/migrations/0001` a `0003` en orden.
+
 El repositorio contiene **solo código**. Los datos de clientes vivirán en Supabase (RLS forzada, login por usuario y contraseña, cifrado de contenido en el navegador, bitácora encadenada). Nunca se versionan datos, claves ni archivos de clientes (`.gitignore`, `.gitleaks.toml`). Detalle en `docs/plan.md`.
