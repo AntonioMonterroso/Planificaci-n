@@ -5,6 +5,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH ?? '/opt/node-tools/node_modules/playwright');
 
 const base = process.argv[2] ?? 'http://localhost:8080';
+const PAGE = process.env.PAGE ?? 'index.html';
 const out = process.argv[3] ?? '/tmp';
 const problems = [];
 const check = (ok, msg) => { console.log(`${ok ? 'OK ' : 'FALLA'}  ${msg}`); if (!ok) problems.push(msg); };
@@ -18,17 +19,17 @@ page.on('pageerror', (e) => logs.push(`pageerror: ${e.message}`));
 const gaps = (p) => p.evaluate(() => { const k = [...document.querySelectorAll('.view > *')]; return k.slice(1).map((el, i) => Math.round(el.getBoundingClientRect().top - k[i].getBoundingClientRect().bottom)); });
 
 // ---- Tablero ----
-await page.goto(`${base}/index.html#/tablero`);
+await page.goto(`${base}/${PAGE}#/tablero`);
 await page.waitForSelector('.stat .num');
 await page.waitForTimeout(1100);
 await page.screenshot({ path: `${out}/01-tablero-oscuro.png`, fullPage: true });
 check((await page.locator('.nav a').count()) >= 18, 'navegación con todos los paneles');
-check((await page.locator('.logo-plate img').getAttribute('src')) === 'assets/logo.webp', 'el tablero muestra el logo completo');
+check(/^(assets\/logo\.webp|data:image\/webp)/.test(await page.locator('.logo-plate img').getAttribute('src')), 'el tablero muestra el logo completo');
 check((await page.locator('.brand-name').textContent()) === 'Monterroso', 'lockup de marca en la barra lateral');
 check((await gaps(page)).every((g) => g >= 20), `secciones separadas por ≥ 20 px (${(await gaps(page)).join(', ')})`);
 
 // ---- Cédulas ----
-await page.goto(`${base}/index.html#/cedulas/A1-1`);
+await page.goto(`${base}/${PAGE}#/cedulas/A1-1`);
 await page.waitForSelector('table.ledger');
 check((await page.locator('.crumbs .cur').textContent()) === 'A1-1', 'breadcrumb muestra A1-1');
 check((await page.locator('.crumbs a').allTextContents()).join(',').includes('BG'), 'breadcrumb ofrece subir a BG');
@@ -62,7 +63,7 @@ await page.waitForSelector('#statusbar:not([hidden])');
 check((await page.locator('#statusbar').textContent()).includes('Q5,801.00'), 'barra de suma de celdas');
 await page.screenshot({ path: `${out}/02-cedula-oscuro.png`, fullPage: true });
 
-await page.goto(`${base}/index.html#/cedulas/A`);
+await page.goto(`${base}/${PAGE}#/cedulas/A`);
 await page.waitForSelector('table.ledger');
 await page.locator('summary', { hasText: 'Ajustes y reclasificaciones' }).click();
 await page.selectOption('#adj-debe', 'A1-2|fondo');
@@ -74,7 +75,7 @@ await page.locator('summary', { hasText: 'Ajustes y reclasificaciones' }).click(
 check((await page.locator('.banner.ok b', { hasText: 'AJ-2' }).count()) > 0, 'se registra la partida AJ-2');
 
 // ---- Perfil del encargo ----
-await page.goto(`${base}/index.html#/perfil`);
+await page.goto(`${base}/${PAGE}#/perfil`);
 await page.waitForSelector('.tl-track');
 await page.waitForTimeout(800);
 check((await page.locator('.tl-pin').count()) >= 6, 'línea de tiempo con hitos');
@@ -84,7 +85,7 @@ check((await gaps(page)).every((g) => g >= 20), 'perfil: secciones separadas');
 await page.screenshot({ path: `${out}/03-perfil-oscuro.png`, fullPage: true });
 
 // ---- Documentos del cliente ----
-await page.goto(`${base}/index.html#/pbc`);
+await page.goto(`${base}/${PAGE}#/pbc`);
 await page.waitForSelector('table.tbl');
 await page.waitForTimeout(600);
 await page.locator('tr', { hasText: 'Libro mayor del ejercicio' }).click();
@@ -99,7 +100,7 @@ check((await page.locator('.toast').count()) > 0, 'PBC: no se acepta sin verific
 await page.screenshot({ path: `${out}/04-pbc-oscuro.png`, fullPage: true });
 
 // ---- Equipo ----
-await page.goto(`${base}/index.html#/equipo`);
+await page.goto(`${base}/${PAGE}#/equipo`);
 await page.waitForSelector('.occ');
 const before = await page.locator('.banner.error').count();
 await page.locator('tr', { hasText: 'Encargado (demo)' }).locator('button', { hasText: 'Ausente 14 d' }).click();
@@ -111,10 +112,10 @@ await page.screenshot({ path: `${out}/05-equipo-oscuro.png`, fullPage: true });
 await page.click('#theme-btn');
 await page.waitForTimeout(300);
 check((await page.getAttribute('html', 'data-theme')) === 'light', 'modo claro activo');
-await page.goto(`${base}/index.html#/tablero`);
+await page.goto(`${base}/${PAGE}#/tablero`);
 await page.waitForTimeout(1100);
 await page.screenshot({ path: `${out}/06-tablero-claro.png`, fullPage: true });
-await page.goto(`${base}/index.html#/cedulas/A1`);
+await page.goto(`${base}/${PAGE}#/cedulas/A1`);
 await page.waitForSelector('table.ledger');
 await page.screenshot({ path: `${out}/07-cedula-claro.png`, fullPage: true });
 
@@ -124,7 +125,7 @@ const mp = await m.newPage();
 mp.on('pageerror', (e) => logs.push(`pageerror(m): ${e.message}`));
 mp.on('console', (msg) => { if (['error', 'warning'].includes(msg.type())) logs.push(`m ${msg.type()}: ${msg.text()}`); });
 for (const [name, hash] of [['08-movil-tablero', 'tablero'], ['09-movil-cedula', 'cedulas/A1'], ['10-movil-perfil', 'perfil'], ['11-movil-pbc', 'pbc'], ['12-movil-equipo', 'equipo']]) {
-  await mp.goto(`${base}/index.html#/${hash}`);
+  await mp.goto(`${base}/${PAGE}#/${hash}`);
   await mp.waitForSelector('#main > *');
   await mp.waitForTimeout(900);
   const over = await mp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
