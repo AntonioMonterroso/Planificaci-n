@@ -31,6 +31,8 @@ node tests/e2e/smoke.mjs   # prueba en navegador (requiere Playwright)
 
 - **Calendario** (`js/core/calendario.js`): reúne hitos, informe, armado del archivo, documentos pendientes y tareas. No trae fechas legales: cada obligación se registra con su **fuente oficial** obligatoria, queda *sin validar* y la valida otra persona (en la demostración hay un solo usuario, así que un validador ficticio simula la segunda). La parte legal la validan el auditor y su asesor.
 
+- **Biblioteca de formatos** (`js/core/formato.js`, `js/formatos/`, `scripts/extraer_formato.py`): cuestionarios y checklists como datos. Un SI exige referencia a papel de trabajo o comentario; no se cierra con pendientes y exige tres personas distintas. Piloto: cuestionario de factores de riesgo inherentes (NIA 315). Para convertir más formatos, descarga los `.xlsx` a una carpeta aislada y ejecuta `python3 -I scripts/extraer_formato.py archivo.xlsx borrador.json`: toma solo el texto (nunca respuestas), no ejecuta macros y avisa de vínculos externos. El borrador se revisa a mano antes de registrarlo.
+
 ## Conectar a Supabase (opcional)
 
 Sin configuración la app corre en modo demostración. Para conectarla: copia `js/config.example.js` como `js/config.local.js` (ignorado por git) con la URL y la clave **anon** del proyecto, aplica `supabase/migrations/*.sql` y crea los usuarios en Auth. Entra con usuario y contraseña; la bandeja lee y escribe en la base y es la RLS quien decide qué ves y qué puedes hacer. Nunca uses aquí la clave `service_role`. La CSP de `index.html` solo permite conectar al dominio del proyecto.

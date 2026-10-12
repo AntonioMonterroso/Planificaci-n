@@ -146,6 +146,23 @@ await page.locator('button', { hasText: 'Registrar' }).click();
 await page.waitForTimeout(300);
 check((await page.locator('.occ').count()) === evs + 1 && (await page.locator('.chip', { hasText: 'Sin validar' }).count()) === 1, 'Calendario: la obligación con fuente queda sin validar');
 
+// ---- Biblioteca de formatos ----
+await page.goto(`${base}/${PAGE}#/biblioteca`);
+await page.waitForSelector('#bib-q');
+await page.fill('#bib-q', 'inexistente-xyz');
+check((await page.locator('text=Ningún formato coincide').count()) === 1, 'Biblioteca: la búsqueda filtra los formatos');
+await page.goto(`${base}/${PAGE}#/biblioteca/frir`);
+await page.waitForSelector('.occ');
+check((await page.locator('.occ').count()) === 33, 'Biblioteca: el cuestionario muestra sus 33 preguntas');
+await page.locator('.occ').first().locator('button', { hasText: 'SI' }).click();
+await page.waitForTimeout(200);
+check((await page.locator('text=Falta la referencia a papel de trabajo').count()) === 1, 'Biblioteca: un SI sin origen se señala');
+await page.locator('.occ').first().locator('input[placeholder="Ref. P/T"]').fill('B-12');
+await page.locator('.occ').first().locator('input[placeholder="Ref. P/T"]').press('Tab');
+await page.waitForTimeout(200);
+check((await page.locator('text=Falta la referencia a papel de trabajo').count()) === 0, 'Biblioteca: con referencia deja de señalarse');
+check((await page.locator('.chip', { hasText: 'No se puede cerrar' }).count()) === 1, 'Biblioteca: no se cierra con pendientes');
+
 // ---- Bandeja de Claude ----
 await page.goto(`${base}/${PAGE}#/claude`);
 await page.waitForSelector('.bandeja-item');
